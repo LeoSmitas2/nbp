@@ -21,7 +21,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string, empresa?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username: string, empresa: string, cnpj: string, nomeLojas: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isApproved: boolean;
@@ -106,15 +106,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, name: string, empresa?: string) => {
+  const signUp = async (email: string, password: string, username: string, empresa: string, cnpj: string, nomeLojas: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
         data: {
-          name,
+          name: username,
+          username,
           empresa,
+          cnpj,
+          nome_lojas_marketplace: nomeLojas,
         },
       },
     });

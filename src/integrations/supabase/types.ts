@@ -189,28 +189,37 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cnpj: string | null
           created_at: string
           email: string
           empresa: string | null
           id: string
           name: string
+          nome_lojas_marketplace: string | null
           updated_at: string
+          username: string | null
         }
         Insert: {
+          cnpj?: string | null
           created_at?: string
           email: string
           empresa?: string | null
           id: string
           name: string
+          nome_lojas_marketplace?: string | null
           updated_at?: string
+          username?: string | null
         }
         Update: {
+          cnpj?: string | null
           created_at?: string
           email?: string
           empresa?: string | null
           id?: string
           name?: string
+          nome_lojas_marketplace?: string | null
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
