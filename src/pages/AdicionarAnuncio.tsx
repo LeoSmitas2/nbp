@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 const anuncioSchema = z.object({
   url: z.string().url("URL inválida").max(500, "URL muito longa"),
   produto_id: z.string().min(1, "Selecione um produto"),
-  preco_detectado: z.number().positive("Preço deve ser maior que zero"),
 });
 
 interface Produto {
@@ -38,7 +37,6 @@ export default function AdicionarAnuncio() {
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState("");
   const [produtoId, setProdutoId] = useState("");
-  const [precoDetectado, setPrecoDetectado] = useState("");
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
   const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -150,7 +148,6 @@ export default function AdicionarAnuncio() {
       const validatedData = anuncioSchema.parse({
         url,
         produto_id: produtoId,
-        preco_detectado: parseFloat(precoDetectado),
       });
 
       // Encontrar marketplace pela URL
@@ -178,18 +175,15 @@ export default function AdicionarAnuncio() {
         throw new Error("Produto não encontrado");
       }
 
-      // Determinar status baseado no preço
-      const status = validatedData.preco_detectado < produto.preco_minimo ? "Abaixo do mínimo" : "OK";
-
-      // Inserir anúncio
+      // Inserir anúncio com preço detectado zerado (será atualizado posteriormente)
       const { error } = await supabase.from("anuncios_monitorados").insert({
         url: validatedData.url,
         produto_id: validatedData.produto_id,
         marketplace_id: marketplaceEncontrado.id,
-        preco_detectado: validatedData.preco_detectado,
+        preco_detectado: 0,
         preco_minimo: produto.preco_minimo,
         origem: "Manual",
-        status,
+        status: "OK",
         cliente_id: null,
         codigo_marketplace: codigoMLB,
       });
@@ -278,6 +272,45 @@ export default function AdicionarAnuncio() {
                 )}
               </div>
 
+              {url && (
+                <div className="space-y-2">
+                  <Label>Pré-visualização do Link</Label>
+                  <div className="border rounded-lg overflow-hidden bg-muted/30">
+                    <div className="p-3 bg-muted/50 border-b">
+                      <p className="text-xs text-muted-foreground truncate" title={url}>
+                        {url}
+                      </p>
+                    </div>
+                    <div className="relative w-full h-96">
+                      <iframe
+                        src={url}
+                        className="w-full h-full"
+                        sandbox="allow-same-origin"
+                        title="Pré-visualização do anúncio"
+                        onError={(e) => {
+                          // Se der erro ao carregar, mostrar mensagem
+                          const iframe = e.currentTarget;
+                          const parent = iframe.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <div class="flex items-center justify-center h-full text-sm text-muted-foreground p-4 text-center">
+                                <div>
+                                  <p class="mb-2">⚠️ Não foi possível carregar a pré-visualização</p>
+                                  <p class="text-xs">O site não permite visualização em iframe</p>
+                                </div>
+                              </div>
+                            `;
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Pré-visualização do anúncio (alguns sites podem bloquear esta visualização)
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="produto_id">Produto *</Label>
                 <Select value={produtoId} onValueChange={setProdutoId}>
@@ -295,25 +328,6 @@ export default function AdicionarAnuncio() {
                 {errors.produto_id && (
                   <p className="text-sm text-destructive">{errors.produto_id}</p>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="preco_detectado">Preço Detectado (R$) *</Label>
-                <Input
-                  id="preco_detectado"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={precoDetectado}
-                  onChange={(e) => setPrecoDetectado(e.target.value)}
-                />
-                {errors.preco_detectado && (
-                  <p className="text-sm text-destructive">{errors.preco_detectado}</p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Informe o preço atual do anúncio
-                </p>
               </div>
 
               <div className="flex gap-3 pt-4">
