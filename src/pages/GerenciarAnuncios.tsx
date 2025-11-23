@@ -338,88 +338,105 @@ export default function GerenciarAnuncios() {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger id="status-filter">
-                  <SelectValue placeholder="Todos os status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="OK">OK</SelectItem>
-                  <SelectItem value="Abaixo do mínimo">Abaixo do mínimo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status-filter">Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger id="status-filter">
+                    <SelectValue placeholder="Todos os status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="OK">OK</SelectItem>
+                    <SelectItem value="Abaixo do mínimo">Abaixo do mínimo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="produto-filter">Produto</Label>
-              <Select value={produtoFilter} onValueChange={setProdutoFilter}>
-                <SelectTrigger id="produto-filter">
-                  <SelectValue placeholder="Todos os produtos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {produtos.map((produto) => (
-                    <SelectItem key={produto.id} value={produto.id}>
-                      {produto.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="produto-filter">Produto</Label>
+                <Select value={produtoFilter} onValueChange={setProdutoFilter}>
+                  <SelectTrigger id="produto-filter">
+                    <SelectValue placeholder="Todos os produtos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {produtos.map((produto) => (
+                      <SelectItem key={produto.id} value={produto.id}>
+                        {produto.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="marketplace-filter">Marketplace</Label>
-              <Select value={marketplaceFilter} onValueChange={setMarketplaceFilter}>
-                <SelectTrigger id="marketplace-filter">
-                  <SelectValue placeholder="Todos os marketplaces" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {marketplaces.map((marketplace) => (
-                    <SelectItem key={marketplace.id} value={marketplace.id}>
-                      {marketplace.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="marketplace-filter">Marketplace</Label>
+                <Select value={marketplaceFilter} onValueChange={setMarketplaceFilter}>
+                  <SelectTrigger id="marketplace-filter">
+                    <SelectValue placeholder="Todos os marketplaces" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {marketplaces.map((marketplace) => (
+                      <SelectItem key={marketplace.id} value={marketplace.id}>
+                        {marketplace.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="cliente-filter">Cliente</Label>
-              <Select value={clienteFilter} onValueChange={setClienteFilter}>
-                <SelectTrigger id="cliente-filter">
-                  <SelectValue placeholder="Todos os clientes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {clientes.map((cliente) => (
-                    <SelectItem key={cliente.id} value={cliente.id}>
-                      {cliente.name}
-                      {cliente.empresa && ` (${cliente.empresa})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="cliente-filter">Cliente</Label>
+                <Select value={clienteFilter} onValueChange={setClienteFilter}>
+                  <SelectTrigger id="cliente-filter">
+                    <SelectValue placeholder="Todos os clientes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.name}
+                        {cliente.empresa && ` (${cliente.empresa})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="conta-filter">Conta</Label>
-              <Select value={contaFilter} onValueChange={setContaFilter}>
-                <SelectTrigger id="conta-filter">
-                  <SelectValue placeholder="Todas as contas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {contasMarketplace.map((conta) => (
-                    <SelectItem key={conta.id} value={conta.id}>
-                      {conta.nome_conta} ({conta.marketplace})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label htmlFor="conta-filter">Conta</Label>
+                <Select value={contaFilter} onValueChange={setContaFilter}>
+                  <SelectTrigger id="conta-filter">
+                    <SelectValue placeholder="Todas as contas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {contasMarketplace.map((conta) => (
+                      <SelectItem key={conta.id} value={conta.id}>
+                        {conta.nome_conta} ({conta.marketplace})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setProdutoFilter("all");
+                  setMarketplaceFilter("all");
+                  setClienteFilter("all");
+                  setContaFilter("all");
+                }}
+              >
+                Limpar Filtros
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -541,9 +558,15 @@ export default function GerenciarAnuncios() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(anuncio.ultima_atualizacao).toLocaleDateString(
-                            "pt-BR"
-                          )}
+                          <div className="text-sm">
+                            <div>{new Date(anuncio.ultima_atualizacao).toLocaleDateString("pt-BR")}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(anuncio.ultima_atualizacao).toLocaleTimeString("pt-BR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
