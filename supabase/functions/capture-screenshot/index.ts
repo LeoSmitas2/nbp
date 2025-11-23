@@ -46,8 +46,7 @@ serve(async (req) => {
         screenshotWidth: 1280,
         screenshotHeight: 720,
         fullPage: false,
-        // Opções anti-bloqueio com proxy residencial
-        proxyType: 'residential',
+        // Usar proxy padrão do Scrappey
         sessionTTL: 60,
         browserActions: [
           {
