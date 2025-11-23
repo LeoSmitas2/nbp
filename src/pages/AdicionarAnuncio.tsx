@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,13 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
+import { Badge } from "@/components/ui/badge";
 
 const anuncioSchema = z.object({
   url: z.string().url("URL inválida").max(500, "URL muito longa"),
+  produto_id: z.string().min(1, "Selecione um produto"),
+  preco_detectado: z.number().positive("Preço deve ser maior que zero"),
 });
+
+interface Produto {
+  id: string;
+  nome: string;
+  preco_minimo: number;
+}
+
+interface Marketplace {
+  id: string;
+  nome: string;
+  url_base: string;
+}
 
 export default function AdicionarAnuncio() {
   const navigate = useNavigate();
@@ -21,7 +37,73 @@ export default function AdicionarAnuncio() {
 
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState("");
+  const [produtoId, setProdutoId] = useState("");
+  const [precoDetectado, setPrecoDetectado] = useState("");
+  const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      navigate("/dashboard-cliente");
+      return;
+    }
+    fetchData();
+  }, [isAdmin, navigate]);
+
+  useEffect(() => {
+    detectarMarketplace();
+  }, [url]);
+
+  const fetchData = async () => {
+    try {
+      const [produtosData, marketplacesData] = await Promise.all([
+        supabase.from("produtos").select("id, nome, preco_minimo").eq("ativo", true).order("nome"),
+        supabase.from("marketplaces").select("id, nome, url_base").eq("ativo", true).order("nome"),
+      ]);
+
+      setProdutos(produtosData.data || []);
+      setMarketplaces(marketplacesData.data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const detectarMarketplace = () => {
+    if (!url) {
+      setMarketplaceDetectado(null);
+      return;
+    }
+
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+
+      // Encontrar marketplace que corresponde ao hostname
+      const marketplaceEncontrado = marketplaces.find((marketplace) => {
+        try {
+          const baseUrl = new URL(marketplace.url_base);
+          const baseHostname = baseUrl.hostname.toLowerCase();
+          
+          // Verifica se o hostname contém o domínio base do marketplace
+          return hostname.includes(baseHostname.replace('www.', '')) || 
+                 baseHostname.replace('www.', '').includes(hostname.replace('www.', ''));
+        } catch {
+          return false;
+        }
+      });
+
+      setMarketplaceDetectado(marketplaceEncontrado?.nome || null);
+    } catch {
+      setMarketplaceDetectado(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,29 +111,58 @@ export default function AdicionarAnuncio() {
     setLoading(true);
 
     try {
-      // Validar URL
-      const validatedData = anuncioSchema.parse({ url });
-
-      // Criar anúncio com status pendente (será completado pelo admin)
-      const { error } = await supabase.from("anuncios_monitorados").insert({
-        url: validatedData.url,
-        // Campos temporários - admin precisará completar
-        produto_id: "00000000-0000-0000-0000-000000000000", // Placeholder
-        marketplace_id: "00000000-0000-0000-0000-000000000000", // Placeholder
-        preco_detectado: 0,
-        preco_minimo: 0,
-        origem: "Manual",
-        status: "OK",
+      // Validar dados
+      const validatedData = anuncioSchema.parse({
+        url,
+        produto_id: produtoId,
+        preco_detectado: parseFloat(precoDetectado),
       });
 
-      if (error) {
-        // Se der erro por falta de marketplace/produto, avisar ao usuário
-        throw new Error("Por favor, cadastre marketplaces e produtos antes de adicionar anúncios");
+      // Encontrar marketplace pela URL
+      const marketplaceEncontrado = marketplaces.find((marketplace) => {
+        try {
+          const urlObj = new URL(validatedData.url);
+          const hostname = urlObj.hostname.toLowerCase();
+          const baseUrl = new URL(marketplace.url_base);
+          const baseHostname = baseUrl.hostname.toLowerCase();
+          
+          return hostname.includes(baseHostname.replace('www.', '')) || 
+                 baseHostname.replace('www.', '').includes(hostname.replace('www.', ''));
+        } catch {
+          return false;
+        }
+      });
+
+      if (!marketplaceEncontrado) {
+        throw new Error("Não foi possível identificar o marketplace a partir da URL. Certifique-se de que o marketplace está cadastrado no sistema.");
       }
+
+      // Buscar dados do produto
+      const produto = produtos.find((p) => p.id === validatedData.produto_id);
+      if (!produto) {
+        throw new Error("Produto não encontrado");
+      }
+
+      // Determinar status baseado no preço
+      const status = validatedData.preco_detectado < produto.preco_minimo ? "Abaixo do mínimo" : "OK";
+
+      // Inserir anúncio
+      const { error } = await supabase.from("anuncios_monitorados").insert({
+        url: validatedData.url,
+        produto_id: validatedData.produto_id,
+        marketplace_id: marketplaceEncontrado.id,
+        preco_detectado: validatedData.preco_detectado,
+        preco_minimo: produto.preco_minimo,
+        origem: "Manual",
+        status,
+        cliente_id: null,
+      });
+
+      if (error) throw error;
 
       toast({
         title: "Anúncio adicionado com sucesso!",
-        description: "O anúncio foi cadastrado e está aguardando processamento.",
+        description: "O anúncio foi cadastrado no sistema.",
       });
 
       navigate("/gerenciar-anuncios");
@@ -92,7 +203,7 @@ export default function AdicionarAnuncio() {
           <CardHeader>
             <CardTitle>Adicionar Anúncio Monitorado</CardTitle>
             <CardDescription>
-              Informe o link do anúncio que deseja monitorar
+              Informe os dados do anúncio. O marketplace será detectado automaticamente pela URL.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -110,13 +221,60 @@ export default function AdicionarAnuncio() {
                 {errors.url && (
                   <p className="text-sm text-destructive">{errors.url}</p>
                 )}
+                {marketplaceDetectado && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span>Marketplace detectado:</span>
+                    <Badge variant="secondary">{marketplaceDetectado}</Badge>
+                  </div>
+                )}
+                {url && !marketplaceDetectado && (
+                  <p className="text-sm text-amber-600">
+                    ⚠️ Marketplace não identificado. Verifique se a URL está correta e se o marketplace está cadastrado.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="produto_id">Produto *</Label>
+                <Select value={produtoId} onValueChange={setProdutoId}>
+                  <SelectTrigger id="produto_id">
+                    <SelectValue placeholder="Selecione o produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {produtos.map((produto) => (
+                      <SelectItem key={produto.id} value={produto.id}>
+                        {produto.nome} (Preço mín: R$ {produto.preco_minimo.toFixed(2)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.produto_id && (
+                  <p className="text-sm text-destructive">{errors.produto_id}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="preco_detectado">Preço Detectado (R$) *</Label>
+                <Input
+                  id="preco_detectado"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={precoDetectado}
+                  onChange={(e) => setPrecoDetectado(e.target.value)}
+                />
+                {errors.preco_detectado && (
+                  <p className="text-sm text-destructive">{errors.preco_detectado}</p>
+                )}
                 <p className="text-sm text-muted-foreground">
-                  Cole aqui o link completo do anúncio que deseja monitorar
+                  Informe o preço atual do anúncio
                 </p>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading} className="flex-1">
+                <Button type="submit" disabled={loading || !marketplaceDetectado} className="flex-1">
                   {loading ? "Adicionando..." : "Adicionar Anúncio"}
                 </Button>
                 <Button
