@@ -36,7 +36,7 @@ export default function ContasMarketplaces() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClienteId, setEditingClienteId] = useState<string | null>(null);
-  const [contasCliente, setContasCliente] = useState<{ nome: string; marketplace: string }[]>([]);
+  const [contasCliente, setContasCliente] = useState<{ nome: string; marketplace: string; cliente_id: string }[]>([]);
 
   const marketplaces = ["Mercado Livre", "Shopee", "Amazon", "Magalu", "Americanas"];
 
@@ -102,7 +102,7 @@ export default function ContasMarketplaces() {
     // Buscar contas do cliente
     const { data, error } = await supabase
       .from("contas_marketplace")
-      .select("nome_conta, marketplace")
+      .select("nome_conta, marketplace, cliente_id")
       .eq("cliente_id", clienteId);
 
     if (error) {
@@ -111,19 +111,19 @@ export default function ContasMarketplaces() {
       return;
     }
 
-    setContasCliente(data?.map(c => ({ nome: c.nome_conta, marketplace: c.marketplace })) || []);
+    setContasCliente(data?.map(c => ({ nome: c.nome_conta, marketplace: c.marketplace, cliente_id: c.cliente_id })) || []);
     setIsDialogOpen(true);
   };
 
   const addLoja = () => {
-    setContasCliente([...contasCliente, { nome: "", marketplace: "" }]);
+    setContasCliente([...contasCliente, { nome: "", marketplace: "", cliente_id: editingClienteId || "" }]);
   };
 
   const removeLoja = (index: number) => {
     setContasCliente(contasCliente.filter((_, i) => i !== index));
   };
 
-  const updateLoja = (index: number, field: "nome" | "marketplace", value: string) => {
+  const updateLoja = (index: number, field: "nome" | "marketplace" | "cliente_id", value: string) => {
     const newContas = [...contasCliente];
     newContas[index][field] = value;
     setContasCliente(newContas);
@@ -133,6 +133,13 @@ export default function ContasMarketplaces() {
     if (!editingClienteId) return;
 
     try {
+      // Validar que todas as contas têm cliente atribuído
+      const contasSemCliente = contasCliente.filter(c => !c.cliente_id || !c.cliente_id.trim());
+      if (contasSemCliente.length > 0) {
+        toast.error("Todas as contas devem ter um cliente atribuído");
+        return;
+      }
+
       // Remover contas antigas do cliente
       const { error: deleteError } = await supabase
         .from("contas_marketplace")
@@ -143,11 +150,11 @@ export default function ContasMarketplaces() {
 
       // Adicionar novas contas válidas
       const contasValidas = contasCliente
-        .filter(c => c.nome.trim() && c.marketplace)
+        .filter(c => c.nome.trim() && c.marketplace && c.cliente_id)
         .map(c => ({
           nome_conta: c.nome,
           marketplace: c.marketplace,
-          cliente_id: editingClienteId
+          cliente_id: c.cliente_id
         }));
 
       if (contasValidas.length > 0) {
@@ -304,6 +311,24 @@ export default function ContasMarketplaces() {
                             {marketplaces.map((mp) => (
                               <SelectItem key={mp} value={mp}>
                                 {mp}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`cliente-${index}`}>Cliente</Label>
+                        <Select
+                          value={conta.cliente_id}
+                          onValueChange={(value) => updateLoja(index, "cliente_id", value)}
+                        >
+                          <SelectTrigger id={`cliente-${index}`}>
+                            <SelectValue placeholder="Selecione o cliente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clientes.map((cliente) => (
+                              <SelectItem key={cliente.id} value={cliente.id}>
+                                {cliente.name} - {cliente.empresa || cliente.email}
                               </SelectItem>
                             ))}
                           </SelectContent>
