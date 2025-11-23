@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Camera } from "lucide-react";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 
@@ -40,6 +40,8 @@ export default function AdicionarAnuncio() {
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
   const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [capturandoScreenshot, setCapturandoScreenshot] = useState(false);
   
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
@@ -135,6 +137,45 @@ export default function AdicionarAnuncio() {
       setCodigoMLB(null);
     } catch {
       setCodigoMLB(null);
+    }
+  };
+
+  const capturarScreenshot = async () => {
+    if (!url) {
+      toast({
+        title: "URL necessária",
+        description: "Informe uma URL válida antes de capturar o screenshot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCapturandoScreenshot(true);
+    setScreenshot(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('capture-screenshot', {
+        body: { url }
+      });
+
+      if (error) throw error;
+
+      if (data?.screenshot) {
+        setScreenshot(data.screenshot);
+        toast({
+          title: "Screenshot capturado!",
+          description: "O screenshot foi obtido com sucesso",
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao capturar screenshot:', error);
+      toast({
+        title: "Erro ao capturar screenshot",
+        description: error.message || "Não foi possível capturar o screenshot da página",
+        variant: "destructive",
+      });
+    } finally {
+      setCapturandoScreenshot(false);
     }
   };
 
@@ -274,39 +315,68 @@ export default function AdicionarAnuncio() {
 
               {url && (
                 <div className="space-y-2">
-                  <Label>Pré-visualização do Link</Label>
-                  <div className="border rounded-lg overflow-hidden bg-muted/30">
-                    <div className="p-3 bg-muted/50 border-b">
-                      <p className="text-xs text-muted-foreground truncate" title={url}>
-                        {url}
-                      </p>
-                    </div>
-                    <div className="relative w-full h-96">
-                      <iframe
-                        src={url}
-                        className="w-full h-full"
-                        sandbox="allow-same-origin"
-                        title="Pré-visualização do anúncio"
-                        onError={(e) => {
-                          // Se der erro ao carregar, mostrar mensagem
-                          const iframe = e.currentTarget;
-                          const parent = iframe.parentElement;
-                          if (parent) {
-                            parent.innerHTML = `
-                              <div class="flex items-center justify-center h-full text-sm text-muted-foreground p-4 text-center">
-                                <div>
-                                  <p class="mb-2">⚠️ Não foi possível carregar a pré-visualização</p>
-                                  <p class="text-xs">O site não permite visualização em iframe</p>
-                                </div>
-                              </div>
-                            `;
-                          }
-                        }}
-                      />
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Pré-visualização do Link</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={capturarScreenshot}
+                      disabled={capturandoScreenshot || !url}
+                    >
+                      <Camera className="mr-2 h-4 w-4" />
+                      {capturandoScreenshot ? "Capturando..." : "Capturar Screenshot"}
+                    </Button>
                   </div>
+                  
+                  {screenshot ? (
+                    <div className="border rounded-lg overflow-hidden bg-muted/30">
+                      <div className="p-3 bg-muted/50 border-b">
+                        <p className="text-xs text-muted-foreground truncate" title={url}>
+                          {url}
+                        </p>
+                      </div>
+                      <div className="relative w-full">
+                        <img 
+                          src={screenshot} 
+                          alt="Screenshot do anúncio" 
+                          className="w-full h-auto"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden bg-muted/30">
+                      <div className="p-3 bg-muted/50 border-b">
+                        <p className="text-xs text-muted-foreground truncate" title={url}>
+                          {url}
+                        </p>
+                      </div>
+                      <div className="relative w-full h-96">
+                        <iframe
+                          src={url}
+                          className="w-full h-full"
+                          sandbox="allow-same-origin"
+                          title="Pré-visualização do anúncio"
+                          onError={(e) => {
+                            const iframe = e.currentTarget;
+                            const parent = iframe.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `
+                                <div class="flex items-center justify-center h-full text-sm text-muted-foreground p-4 text-center">
+                                  <div>
+                                    <p class="mb-2">⚠️ Não foi possível carregar a pré-visualização</p>
+                                    <p class="text-xs">O site não permite visualização em iframe</p>
+                                  </div>
+                                </div>
+                              `;
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground">
-                    Pré-visualização do anúncio (alguns sites podem bloquear esta visualização)
+                    {screenshot ? "Screenshot capturado da página" : "Pré-visualização do anúncio (alguns sites podem bloquear esta visualização)"}
                   </p>
                 </div>
               )}
