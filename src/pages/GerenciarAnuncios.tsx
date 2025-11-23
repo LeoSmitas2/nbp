@@ -310,12 +310,6 @@ export default function GerenciarAnuncios() {
       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
   };
 
-  const getOrigemColor = (origem: string) => {
-    return origem === "Manual"
-      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-      : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-  };
-
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -449,6 +443,7 @@ export default function GerenciarAnuncios() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produto</TableHead>
+                    <TableHead>Código</TableHead>
                     <TableHead>Marketplace</TableHead>
                     <TableHead>Conta</TableHead>
                     <TableHead>Cliente</TableHead>
@@ -456,7 +451,6 @@ export default function GerenciarAnuncios() {
                     <TableHead>Preço Mínimo</TableHead>
                     <TableHead>Diferença</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Origem</TableHead>
                     <TableHead>Atualização</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -467,6 +461,15 @@ export default function GerenciarAnuncios() {
                       <TableRow key={anuncio.id}>
                         <TableCell className="font-medium">
                           {anuncio.produtos.nome}
+                        </TableCell>
+                        <TableCell>
+                          {anuncio.codigo_marketplace ? (
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {anuncio.codigo_marketplace}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -535,11 +538,6 @@ export default function GerenciarAnuncios() {
                         <TableCell>
                           <Badge className={getStatusColor(anuncio.status)}>
                             {anuncio.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getOrigemColor(anuncio.origem)}>
-                            {anuncio.origem}
                           </Badge>
                         </TableCell>
                         <TableCell>
