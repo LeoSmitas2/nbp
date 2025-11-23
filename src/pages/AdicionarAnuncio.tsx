@@ -177,16 +177,51 @@ export default function AdicionarAnuncio() {
 
       if (webhookResponse.ok) {
         const webhookData = await webhookResponse.json();
+        console.log("Resposta da webhook:", webhookData);
 
+        // Verificar se é uma resposta assíncrona (workflow iniciado)
+        if (webhookData.message === "Workflow was started") {
+          setWebhookStatus("Processamento iniciado...");
+          
+          // Aguardar alguns segundos e tentar novamente
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Tentar buscar novamente
+          const retryResponse = await fetch(
+            `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
+            { method: "GET" }
+          );
+          
+          if (retryResponse.ok) {
+            const retryData = await retryResponse.json();
+            console.log("Segunda tentativa:", retryData);
+            
+            if (Array.isArray(retryData) && retryData.length > 0 && retryData[0].data) {
+              const data = retryData[0].data[0];
+              setDadosWebhook(data);
+              setWebhookStatus("");
+              return;
+            }
+          }
+          
+          toast({
+            title: "Processamento em andamento",
+            description: "O sistema está processando os dados. Por favor, adicione o anúncio manualmente por enquanto.",
+          });
+          setWebhookStatus("");
+          return;
+        }
+
+        // Verificar formato de resposta com array
         if (Array.isArray(webhookData) && webhookData.length > 0 && webhookData[0].data) {
           const data = webhookData[0].data[0];
           setDadosWebhook(data);
           setWebhookStatus("");
         } else {
+          console.error("Formato de resposta inválido:", webhookData);
           toast({
             title: "Erro ao buscar dados",
-            description: "Não foi possível obter informações do produto.",
-            variant: "destructive",
+            description: "O formato da resposta não é válido. Adicione o anúncio manualmente.",
           });
         }
       } else {
@@ -200,8 +235,7 @@ export default function AdicionarAnuncio() {
       console.error("Erro ao buscar webhook:", error);
       toast({
         title: "Erro de conexão",
-        description: "Não foi possível buscar os dados do produto.",
-        variant: "destructive",
+        description: "Não foi possível buscar os dados. Você pode adicionar o anúncio sem os dados automáticos.",
       });
     } finally {
       setWebhookLoading(false);
@@ -246,9 +280,9 @@ export default function AdicionarAnuncio() {
         throw new Error("Produto não encontrado");
       }
 
-      // Inserir anúncio com dados da webhook
+      // Inserir anúncio com dados da webhook (se disponíveis)
       const precoDetectado = dadosWebhook?.preço || 0;
-      const novoStatus = precoDetectado < produto.preco_minimo ? "Abaixo do mínimo" : "OK";
+      const novoStatus = precoDetectado > 0 && precoDetectado < produto.preco_minimo ? "Abaixo do mínimo" : "OK";
       
       const { error } = await supabase.from("anuncios_monitorados").insert({
         url: validatedData.url,
@@ -462,7 +496,7 @@ export default function AdicionarAnuncio() {
               )}
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading || webhookLoading || !marketplaceDetectado || !dadosWebhook} className="flex-1">
+                <Button type="submit" disabled={loading || webhookLoading || !marketplaceDetectado} className="flex-1">
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
