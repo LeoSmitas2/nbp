@@ -191,8 +191,9 @@ export default function AdicionarAnuncio() {
 
       if (error) throw error;
 
-      // Acionar webhook após sucesso
+      // Acionar webhook e aguardar resposta
       if (codigoMLB) {
+        setLoading(true);
         try {
           const webhookResponse = await fetch(
             `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`, 
@@ -200,9 +201,43 @@ export default function AdicionarAnuncio() {
           );
           
           if (webhookResponse.ok) {
+            const webhookData = await webhookResponse.json();
+            
+            // Processar dados retornados
+            if (Array.isArray(webhookData) && webhookData.length > 0 && webhookData[0].data) {
+              const data = webhookData[0].data[0];
+              
+              // Buscar o anúncio recém criado para atualizar
+              const { data: anuncioData, error: fetchError } = await supabase
+                .from("anuncios_monitorados")
+                .select("id")
+                .eq("codigo_marketplace", codigoMLB)
+                .order("ultima_atualizacao", { ascending: false })
+                .limit(1)
+                .single();
+
+              if (!fetchError && anuncioData) {
+                // Atualizar anúncio com dados da webhook
+                const precoDetectado = data.preço || 0;
+                const produtoInfo = produtos.find((p) => p.id === produtoId);
+                const novoStatus = precoDetectado < (produtoInfo?.preco_minimo || 0) 
+                  ? "Abaixo do mínimo" 
+                  : "OK";
+
+                await supabase
+                  .from("anuncios_monitorados")
+                  .update({
+                    preco_detectado: precoDetectado,
+                    status: novoStatus,
+                    ultima_atualizacao: new Date().toISOString()
+                  })
+                  .eq("id", anuncioData.id);
+              }
+            }
+            
             toast({
               title: "Anúncio adicionado com sucesso!",
-              description: "O anúncio foi cadastrado e enviado para processamento.",
+              description: "O anúncio foi cadastrado e os dados foram atualizados.",
             });
           } else {
             toast({
@@ -215,7 +250,7 @@ export default function AdicionarAnuncio() {
           console.error("Erro ao acionar webhook:", webhookError);
           toast({
             title: "Anúncio adicionado",
-            description: "O anúncio foi cadastrado, mas o webhook não pôde ser acionado.",
+            description: "O anúncio foi cadastrado, mas o webhook não retornou dados válidos.",
             variant: "destructive",
           });
         }
