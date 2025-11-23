@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 interface Denuncia {
   id: string;
+  codigo_denuncia: string;
   url: string;
   preco_informado: number;
   observacoes: string | null;
@@ -326,6 +327,7 @@ export default function GerenciarDenuncias() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Código</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Marketplace</TableHead>
@@ -339,6 +341,11 @@ export default function GerenciarDenuncias() {
                 <TableBody>
                   {denuncias.map((denuncia) => (
                     <TableRow key={denuncia.id}>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {denuncia.codigo_denuncia}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{denuncia.profiles.name}</p>

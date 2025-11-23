@@ -313,15 +313,15 @@ export default function NovaDenuncia() {
         throw new Error("Marketplace não encontrado");
       }
 
-      const { error } = await supabase.from("denuncias").insert({
+      const { error } = await supabase.from("denuncias").insert([{
         cliente_id: user.id,
         produto_id: produtoId,
         marketplace_id: marketplace.id,
         url: url,
         preco_informado: precoInformado,
         observacoes: observacoes || null,
-        status: "Solicitada",
-      });
+        status: "Solicitada" as const,
+      }]);
 
       if (error) throw error;
 
