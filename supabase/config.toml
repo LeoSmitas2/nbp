@@ -1,4 +1,7 @@
 project_id = "dmvnoasxfkjklzojvqgm"
 
+[functions.webhook-anuncio-response]
+verify_jwt = false
+
 [functions.capture-screenshot]
 verify_jwt = false
