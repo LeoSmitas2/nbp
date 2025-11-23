@@ -28,7 +28,7 @@ interface Cliente {
 }
 
 interface ContaComCliente extends ContaMarketplace {
-  cliente: Cliente;
+  cliente: Cliente | null;
 }
 
 export default function ContasMarketplaces() {
@@ -59,8 +59,8 @@ export default function ContasMarketplaces() {
   const contasFiltradas = contas.filter(conta => {
     const matchNome = conta.nome_conta.toLowerCase().includes(filtroNome.toLowerCase());
     const matchMarketplace = filtroMarketplace === "all" || !filtroMarketplace || conta.marketplace === filtroMarketplace;
-    const matchCliente = conta.cliente.name.toLowerCase().includes(filtroCliente.toLowerCase());
-    const matchEmpresa = (conta.cliente.empresa || "").toLowerCase().includes(filtroEmpresa.toLowerCase());
+    const matchCliente = !conta.cliente || conta.cliente.name.toLowerCase().includes(filtroCliente.toLowerCase());
+    const matchEmpresa = !conta.cliente || (conta.cliente.empresa || "").toLowerCase().includes(filtroEmpresa.toLowerCase());
     
     return matchNome && matchMarketplace && matchCliente && matchEmpresa;
   });
@@ -94,10 +94,10 @@ export default function ContasMarketplaces() {
 
       const contasFormatadas = (data || []).map(conta => ({
         ...conta,
-        cliente: conta.cliente as unknown as Cliente
-      })) as ContaComCliente[];
+        cliente: conta.cliente_id ? (conta.cliente as unknown as Cliente) : null
+      })) as (ContaMarketplace & { cliente: Cliente | null })[];
 
-      setContas(contasFormatadas);
+      setContas(contasFormatadas as any);
     } catch (error) {
       console.error("Erro ao buscar contas:", error);
       toast.error("Erro ao carregar contas");
