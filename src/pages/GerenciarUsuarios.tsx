@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, CheckCircle, XCircle, Edit, Shield, UserX, AlertCircle } from "lucide-react";
+import { Users, CheckCircle, XCircle, Edit, Shield, UserX, AlertCircle, Plus, Filter } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Usuario {
   id: string;
@@ -29,21 +30,35 @@ export default function GerenciarUsuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [empresaFilter, setEmpresaFilter] = useState<string>("");
+  const [cnpjFilter, setCnpjFilter] = useState<string>("");
 
   // Edit form states
   const [editName, setEditName] = useState("");
   const [editEmpresa, setEditEmpresa] = useState("");
   const [editRole, setEditRole] = useState<"ADMIN" | "CLIENT">("CLIENT");
 
+  // Add form states
+  const [addEmail, setAddEmail] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+  const [addName, setAddName] = useState("");
+  const [addEmpresa, setAddEmpresa] = useState("");
+  const [addCnpj, setAddCnpj] = useState("");
+  const [addTelefone, setAddTelefone] = useState("");
+  const [addNomeContato, setAddNomeContato] = useState("");
+  const [addRole, setAddRole] = useState<"ADMIN" | "CLIENT">("CLIENT");
+  const [addAutoApprove, setAddAutoApprove] = useState(true);
+
   useEffect(() => {
     fetchUsuarios();
-  }, [statusFilter, roleFilter]);
+  }, [statusFilter, roleFilter, empresaFilter, cnpjFilter]);
 
   const fetchUsuarios = async () => {
     try {
@@ -71,6 +86,18 @@ export default function GerenciarUsuarios() {
       if (roleFilter !== "all") {
         filteredData = filteredData.filter(
           (u) => u.user_roles[0]?.role === roleFilter
+        );
+      }
+
+      if (empresaFilter.trim()) {
+        filteredData = filteredData.filter(
+          (u) => u.empresa?.toLowerCase().includes(empresaFilter.toLowerCase())
+        );
+      }
+
+      if (cnpjFilter.trim()) {
+        filteredData = filteredData.filter(
+          (u) => u.cnpj?.includes(cnpjFilter)
         );
       }
 
@@ -165,6 +192,78 @@ export default function GerenciarUsuarios() {
     }
   };
 
+  const resetAddForm = () => {
+    setAddEmail("");
+    setAddPassword("");
+    setAddName("");
+    setAddEmpresa("");
+    setAddCnpj("");
+    setAddTelefone("");
+    setAddNomeContato("");
+    setAddRole("CLIENT");
+    setAddAutoApprove(true);
+  };
+
+  const handleAddUser = async () => {
+    if (!addEmail.trim() || !addPassword.trim() || !addName.trim()) {
+      toast.error("Email, senha e nome são obrigatórios");
+      return;
+    }
+
+    if (addPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("Você precisa estar autenticado");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user-admin`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: addEmail.trim(),
+            password: addPassword,
+            name: addName.trim(),
+            empresa: addEmpresa.trim() || null,
+            cnpj: addCnpj.trim() || null,
+            telefone_contato: addTelefone.trim() || null,
+            nome_contato: addNomeContato.trim() || null,
+            role: addRole,
+            autoApprove: addAutoApprove,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar usuário');
+      }
+
+      toast.success("Usuário criado com sucesso!");
+      setAddDialogOpen(false);
+      resetAddForm();
+      fetchUsuarios();
+    } catch (error: any) {
+      console.error("Erro ao criar usuário:", error);
+      toast.error(error.message || "Erro ao criar usuário");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Pendente":
@@ -194,19 +293,28 @@ export default function GerenciarUsuarios() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Gerenciar Usuários</h1>
-        <p className="text-muted-foreground">
-          Gerencie cadastros, aprovações e permissões de usuários
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Gerenciar Usuários</h1>
+          <p className="text-muted-foreground">
+            Gerencie cadastros, aprovações e permissões de usuários
+          </p>
+        </div>
+        <Button onClick={() => setAddDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Usuário
+        </Button>
       </div>
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            Filtros
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status-filter">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -235,7 +343,43 @@ export default function GerenciarUsuarios() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="empresa-filter">Empresa</Label>
+              <Input
+                id="empresa-filter"
+                placeholder="Filtrar por empresa..."
+                value={empresaFilter}
+                onChange={(e) => setEmpresaFilter(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cnpj-filter">CNPJ</Label>
+              <Input
+                id="cnpj-filter"
+                placeholder="Filtrar por CNPJ..."
+                value={cnpjFilter}
+                onChange={(e) => setCnpjFilter(e.target.value)}
+              />
+            </div>
           </div>
+          {(statusFilter !== "all" || roleFilter !== "all" || empresaFilter || cnpjFilter) && (
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setRoleFilter("all");
+                  setEmpresaFilter("");
+                  setCnpjFilter("");
+                }}
+              >
+                Limpar Filtros
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -438,6 +582,144 @@ export default function GerenciarUsuarios() {
             </Button>
             <Button onClick={handleSaveEdit} disabled={saving}>
               {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+            <DialogDescription>
+              Preencha os dados para criar um novo usuário no sistema
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-name">Nome Completo *</Label>
+                <Input
+                  id="add-name"
+                  placeholder="Ex: João da Silva"
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-email">Email *</Label>
+                <Input
+                  id="add-email"
+                  type="email"
+                  placeholder="usuario@email.com"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-password">Senha *</Label>
+                <Input
+                  id="add-password"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                  value={addPassword}
+                  onChange={(e) => setAddPassword(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mínimo de 6 caracteres
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-role">Tipo de Usuário</Label>
+                <Select
+                  value={addRole}
+                  onValueChange={(value) =>
+                    setAddRole(value as "ADMIN" | "CLIENT")
+                  }
+                >
+                  <SelectTrigger id="add-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLIENT">Cliente</SelectItem>
+                    <SelectItem value="ADMIN">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-empresa">Empresa</Label>
+                <Input
+                  id="add-empresa"
+                  placeholder="Nome da empresa"
+                  value={addEmpresa}
+                  onChange={(e) => setAddEmpresa(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-cnpj">CNPJ</Label>
+                <Input
+                  id="add-cnpj"
+                  placeholder="00.000.000/0000-00"
+                  value={addCnpj}
+                  onChange={(e) => setAddCnpj(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-telefone">Telefone de Contato</Label>
+                <Input
+                  id="add-telefone"
+                  placeholder="(00) 00000-0000"
+                  value={addTelefone}
+                  onChange={(e) => setAddTelefone(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-nome-contato">Nome do Contato</Label>
+                <Input
+                  id="add-nome-contato"
+                  placeholder="Nome da pessoa de contato"
+                  value={addNomeContato}
+                  onChange={(e) => setAddNomeContato(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox 
+                id="auto-approve" 
+                checked={addAutoApprove}
+                onCheckedChange={(checked) => setAddAutoApprove(checked as boolean)}
+              />
+              <Label 
+                htmlFor="auto-approve" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                Aprovar usuário automaticamente
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddDialogOpen(false);
+                resetAddForm();
+              }}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleAddUser} disabled={saving}>
+              {saving ? "Criando..." : "Criar Usuário"}
             </Button>
           </DialogFooter>
         </DialogContent>
