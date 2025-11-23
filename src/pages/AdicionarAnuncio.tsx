@@ -50,6 +50,7 @@ export default function AdicionarAnuncio() {
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<string>("");
   const [dadosWebhook, setDadosWebhook] = useState<DadosWebhook | null>(null);
+  const [anuncioExistente, setAnuncioExistente] = useState<boolean>(false);
   const [url, setUrl] = useState("");
   const [produtoId, setProdutoId] = useState("");
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
@@ -74,11 +75,34 @@ export default function AdicionarAnuncio() {
 
   // Disparar webhook automaticamente quando tiver MLB
   useEffect(() => {
-    if (codigoMLB && url) {
-      buscarDadosWebhook();
-    } else {
-      setDadosWebhook(null);
-    }
+    const verificarEBuscarDados = async () => {
+      if (codigoMLB && url) {
+        // Verificar se já existe anúncio com este código
+        const { data: anuncioExiste } = await supabase
+          .from("anuncios_monitorados")
+          .select("id, url, produtos(nome)")
+          .eq("codigo_marketplace", codigoMLB)
+          .maybeSingle();
+
+        if (anuncioExiste) {
+          setAnuncioExistente(true);
+          setDadosWebhook(null);
+          toast({
+            title: "Anúncio já cadastrado",
+            description: `Este anúncio já foi cadastrado anteriormente.`,
+            variant: "destructive",
+          });
+        } else {
+          setAnuncioExistente(false);
+          buscarDadosWebhook();
+        }
+      } else {
+        setDadosWebhook(null);
+        setAnuncioExistente(false);
+      }
+    };
+
+    verificarEBuscarDados();
   }, [codigoMLB]);
 
   const fetchData = async () => {
@@ -383,6 +407,16 @@ export default function AdicionarAnuncio() {
                     ⚠️ Marketplace não identificado. Verifique se a URL está correta e se o marketplace está cadastrado.
                   </p>
                 )}
+                {anuncioExistente && codigoMLB && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg animate-fade-in">
+                    <p className="text-sm text-destructive font-medium">
+                      ⚠️ Este anúncio já foi cadastrado anteriormente com o código {codigoMLB}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Não é possível adicionar anúncios duplicados.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -496,7 +530,11 @@ export default function AdicionarAnuncio() {
               )}
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading || webhookLoading || !marketplaceDetectado} className="flex-1">
+                <Button 
+                  type="submit" 
+                  disabled={loading || webhookLoading || !marketplaceDetectado || anuncioExistente} 
+                  className="flex-1"
+                >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
