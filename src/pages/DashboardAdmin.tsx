@@ -3,9 +3,64 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Users, Package, Store, FileText, BarChart3, AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function DashboardAdmin() {
   const { profile } = useAuth();
+  const [totalAnuncios, setTotalAnuncios] = useState(0);
+  const [denunciasPendentes, setDenunciasPendentes] = useState(0);
+  const [clientesAtivos, setClientesAtivos] = useState(0);
+  const [totalProdutos, setTotalProdutos] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Buscar total de anúncios
+      const { count: anunciosCount, error: anunciosError } = await supabase
+        .from("anuncios_monitorados")
+        .select("*", { count: "exact", head: true });
+
+      if (anunciosError) throw anunciosError;
+      setTotalAnuncios(anunciosCount || 0);
+
+      // Buscar denúncias pendentes (status: Solicitada)
+      const { count: denunciasCount, error: denunciasError } = await supabase
+        .from("denuncias")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "Solicitada");
+
+      if (denunciasError) throw denunciasError;
+      setDenunciasPendentes(denunciasCount || 0);
+
+      // Buscar clientes ativos (aprovados com role CLIENT)
+      const { count: clientesCount, error: clientesError } = await supabase
+        .from("user_roles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "CLIENT")
+        .eq("status", "Aprovado");
+
+      if (clientesError) throw clientesError;
+      setClientesAtivos(clientesCount || 0);
+
+      // Buscar total de produtos ativos
+      const { count: produtosCount, error: produtosError } = await supabase
+        .from("produtos")
+        .select("*", { count: "exact", head: true })
+        .eq("ativo", true);
+
+      if (produtosError) throw produtosError;
+      setTotalProdutos(produtosCount || 0);
+    } catch (error) {
+      console.error("Erro ao buscar dados do dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -24,7 +79,7 @@ export default function DashboardAdmin() {
               <BarChart3 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{loading ? "..." : totalAnuncios}</div>
               <p className="text-xs text-muted-foreground">Total no sistema</p>
             </CardContent>
           </Card>
@@ -35,7 +90,7 @@ export default function DashboardAdmin() {
               <AlertTriangle className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{loading ? "..." : denunciasPendentes}</div>
               <p className="text-xs text-muted-foreground">Aguardando análise</p>
             </CardContent>
           </Card>
@@ -46,7 +101,7 @@ export default function DashboardAdmin() {
               <Users className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{loading ? "..." : clientesAtivos}</div>
               <p className="text-xs text-muted-foreground">Cadastrados e aprovados</p>
             </CardContent>
           </Card>
@@ -57,7 +112,7 @@ export default function DashboardAdmin() {
               <Package className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{loading ? "..." : totalProdutos}</div>
               <p className="text-xs text-muted-foreground">Cadastrados no sistema</p>
             </CardContent>
           </Card>

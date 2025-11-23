@@ -26,6 +26,8 @@ export default function DashboardCliente() {
   const [anuncios, setAnuncios] = useState<AnuncioMonitorado[]>([]);
   const [filteredAnuncios, setFilteredAnuncios] = useState<AnuncioMonitorado[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalDenuncias, setTotalDenuncias] = useState(0);
+  const [denunciasAssociadas, setDenunciasAssociadas] = useState(0);
   
   // Filtros
   const [filtroMarketplace, setFiltroMarketplace] = useState("");
@@ -36,6 +38,7 @@ export default function DashboardCliente() {
 
   useEffect(() => {
     fetchAnuncios();
+    fetchDenuncias();
   }, [profile]);
 
   useEffect(() => {
@@ -124,6 +127,37 @@ export default function DashboardCliente() {
     setFilteredAnuncios(resultado);
   };
 
+  const fetchDenuncias = async () => {
+    if (!profile?.id) return;
+
+    try {
+      // Buscar denúncias criadas pelo cliente
+      const { count: minhasDenuncias, error: error1 } = await supabase
+        .from("denuncias")
+        .select("*", { count: "exact", head: true })
+        .eq("cliente_id", profile.id);
+
+      if (error1) throw error1;
+      setTotalDenuncias(minhasDenuncias || 0);
+
+      // Buscar denúncias associadas ao cliente (que foram reatribuídas)
+      const { data: denunciasData, error: error2 } = await supabase
+        .from("denuncias")
+        .select("id")
+        .eq("cliente_id", profile.id);
+
+      if (error2) throw error2;
+      setDenunciasAssociadas(denunciasData?.length || 0);
+    } catch (error: any) {
+      console.error("Erro ao buscar denúncias:", error);
+    }
+  };
+
+  const anunciosAbaixoMinimo = anuncios.filter(a => a.status === "Abaixo do mínimo").length;
+  const precoMedio = anuncios.length > 0 
+    ? anuncios.reduce((acc, a) => acc + a.preco_detectado, 0) / anuncios.length 
+    : 0;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 space-y-8">
@@ -141,7 +175,7 @@ export default function DashboardCliente() {
               <BarChart3 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{anuncios.length}</div>
               <p className="text-xs text-muted-foreground">Total em acompanhamento</p>
             </CardContent>
           </Card>
@@ -152,7 +186,7 @@ export default function DashboardCliente() {
               <AlertCircle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{anunciosAbaixoMinimo}</div>
               <p className="text-xs text-muted-foreground">Requerem atenção</p>
             </CardContent>
           </Card>
@@ -163,7 +197,7 @@ export default function DashboardCliente() {
               <FileText className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{totalDenuncias}</div>
               <p className="text-xs text-muted-foreground">Enviadas até agora</p>
             </CardContent>
           </Card>
@@ -174,7 +208,12 @@ export default function DashboardCliente() {
               <TrendingUp className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">R$ 0,00</div>
+              <div className="text-2xl font-bold">
+                {new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(precoMedio)}
+              </div>
               <p className="text-xs text-muted-foreground">Dos anúncios</p>
             </CardContent>
           </Card>
