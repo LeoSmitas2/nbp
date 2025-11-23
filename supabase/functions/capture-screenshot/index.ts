@@ -20,11 +20,20 @@ serve(async (req) => {
       );
     }
 
+    const apiKey = Deno.env.get('SCREENSHOT_API_KEY');
+    
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: 'API key não configurada. Configure SCREENSHOT_API_KEY nos secrets.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Capturando screenshot de:', url);
 
-    // Usar screenshot.one - API gratuita confiável
+    // Usar screenshot.one - API com 100 screenshots grátis/mês
     const screenshotApiUrl = new URL('https://api.screenshotone.com/take');
-    screenshotApiUrl.searchParams.set('access_key', 'RJu0vfkD4sfKkA'); // chave demo pública
+    screenshotApiUrl.searchParams.set('access_key', apiKey);
     screenshotApiUrl.searchParams.set('url', url);
     screenshotApiUrl.searchParams.set('viewport_width', '1280');
     screenshotApiUrl.searchParams.set('viewport_height', '720');
