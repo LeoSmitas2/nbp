@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 
@@ -35,6 +35,8 @@ export default function AdicionarAnuncio() {
   const { isAdmin } = useAuth();
 
   const [loading, setLoading] = useState(false);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<string>("");
   const [url, setUrl] = useState("");
   const [produtoId, setProdutoId] = useState("");
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
@@ -193,15 +195,21 @@ export default function AdicionarAnuncio() {
 
       // Acionar webhook e aguardar resposta
       if (codigoMLB) {
-        setLoading(true);
+        setWebhookLoading(true);
+        setWebhookStatus("Processando anúncio...");
+        
         try {
           const webhookResponse = await fetch(
             `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`, 
             { method: "GET" }
           );
           
+          setWebhookStatus("Recebendo dados...");
+          
           if (webhookResponse.ok) {
             const webhookData = await webhookResponse.json();
+            
+            setWebhookStatus("Atualizando preços...");
             
             // Processar dados retornados
             if (Array.isArray(webhookData) && webhookData.length > 0 && webhookData[0].data) {
@@ -235,6 +243,7 @@ export default function AdicionarAnuncio() {
               }
             }
             
+            setWebhookStatus("Concluído!");
             toast({
               title: "Anúncio adicionado com sucesso!",
               description: "O anúncio foi cadastrado e os dados foram atualizados.",
@@ -253,6 +262,9 @@ export default function AdicionarAnuncio() {
             description: "O anúncio foi cadastrado, mas o webhook não retornou dados válidos.",
             variant: "destructive",
           });
+        } finally {
+          setWebhookLoading(false);
+          setWebhookStatus("");
         }
       } else {
         toast({
@@ -357,9 +369,27 @@ export default function AdicionarAnuncio() {
                 )}
               </div>
 
+              {/* Indicador de progresso da webhook */}
+              {webhookLoading && (
+                <div className="flex items-center justify-center gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground">{webhookStatus}</span>
+                    <span className="text-xs text-muted-foreground">Aguarde enquanto processamos os dados...</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading || !marketplaceDetectado} className="flex-1">
-                  {loading ? "Adicionando..." : "Adicionar Anúncio"}
+                <Button type="submit" disabled={loading || webhookLoading || !marketplaceDetectado} className="flex-1">
+                  {loading || webhookLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {webhookLoading ? "Processando..." : "Adicionando..."}
+                    </>
+                  ) : (
+                    "Adicionar Anúncio"
+                  )}
                 </Button>
                 <Button
                   type="button"
