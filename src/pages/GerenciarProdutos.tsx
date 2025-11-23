@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Package, AlertCircle, Trash2 } from "lucide-react";
+import { Plus, Edit, Package, AlertCircle, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Produto {
@@ -19,6 +19,7 @@ interface Produto {
   preco_minimo: number;
   ativo: boolean;
   created_at: string;
+  foto_url: string | null;
 }
 
 export default function GerenciarProdutos() {
@@ -34,6 +35,9 @@ export default function GerenciarProdutos() {
   const [nome, setNome] = useState("");
   const [sku, setSku] = useState("");
   const [precoMinimo, setPrecoMinimo] = useState("");
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchProdutos();
@@ -62,11 +66,15 @@ export default function GerenciarProdutos() {
       setNome(produto.nome);
       setSku(produto.sku);
       setPrecoMinimo(produto.preco_minimo.toString());
+      setFotoPreview(produto.foto_url);
+      setFotoFile(null);
     } else {
       setEditingProduto(null);
       setNome("");
       setSku("");
       setPrecoMinimo("");
+      setFotoPreview(null);
+      setFotoFile(null);
     }
     setDialogOpen(true);
   };
@@ -77,6 +85,64 @@ export default function GerenciarProdutos() {
     setNome("");
     setSku("");
     setPrecoMinimo("");
+    setFotoPreview(null);
+    setFotoFile(null);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Por favor, selecione uma imagem válida');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Imagem muito grande. Máximo 5MB');
+        return;
+      }
+      setFotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveFoto = () => {
+    setFotoFile(null);
+    setFotoPreview(null);
+  };
+
+  const uploadFoto = async (produtoId: string): Promise<string | null> => {
+    if (!fotoFile) return null;
+
+    setUploading(true);
+    try {
+      const fileExt = fotoFile.name.split('.').pop();
+      const fileName = `${produtoId}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('produto-fotos')
+        .upload(filePath, fotoFile, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('produto-fotos')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Erro ao fazer upload da foto:', error);
+      throw error;
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -93,7 +159,14 @@ export default function GerenciarProdutos() {
 
     setSaving(true);
     try {
+      let fotoUrl: string | null = fotoPreview;
+
       if (editingProduto) {
+        // Upload nova foto se houver
+        if (fotoFile) {
+          fotoUrl = await uploadFoto(editingProduto.id);
+        }
+
         // Update
         const { error } = await supabase
           .from("produtos")
@@ -101,6 +174,7 @@ export default function GerenciarProdutos() {
             nome: nome.trim(),
             sku: sku.trim(),
             preco_minimo: preco,
+            foto_url: fotoUrl,
           })
           .eq("id", editingProduto.id);
 
@@ -108,16 +182,32 @@ export default function GerenciarProdutos() {
         toast.success("Produto atualizado com sucesso!");
       } else {
         // Insert
-        const { error } = await supabase
+        const { data: newProduto, error: insertError } = await supabase
           .from("produtos")
           .insert({
             nome: nome.trim(),
             sku: sku.trim(),
             preco_minimo: preco,
             ativo: true,
-          });
+          })
+          .select()
+          .single();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
+
+        // Upload foto se houver
+        if (fotoFile && newProduto) {
+          fotoUrl = await uploadFoto(newProduto.id);
+          
+          // Atualizar com a URL da foto
+          const { error: updateError } = await supabase
+            .from("produtos")
+            .update({ foto_url: fotoUrl })
+            .eq("id", newProduto.id);
+
+          if (updateError) throw updateError;
+        }
+
         toast.success("Produto cadastrado com sucesso!");
       }
 
@@ -222,6 +312,45 @@ export default function GerenciarProdutos() {
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
+                <Label>Foto do Produto</Label>
+                <div className="flex items-start gap-4">
+                  {fotoPreview ? (
+                    <div className="relative">
+                      <img 
+                        src={fotoPreview} 
+                        alt="Preview" 
+                        className="w-32 h-32 object-cover rounded-lg border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={handleRemoveFoto}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/30">
+                      <Package className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      PNG, JPG ou WEBP (máx. 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="nome">Nome do Produto *</Label>
                 <Input
                   id="nome"
@@ -265,8 +394,8 @@ export default function GerenciarProdutos() {
               <Button variant="outline" onClick={handleCloseDialog}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Salvando..." : "Salvar"}
+              <Button onClick={handleSave} disabled={saving || uploading}>
+                {saving || uploading ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -299,6 +428,7 @@ export default function GerenciarProdutos() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Foto</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Preço Mínimo</TableHead>
@@ -310,6 +440,19 @@ export default function GerenciarProdutos() {
                 <TableBody>
                   {produtos.map((produto) => (
                     <TableRow key={produto.id}>
+                      <TableCell>
+                        {produto.foto_url ? (
+                          <img 
+                            src={produto.foto_url} 
+                            alt={produto.nome}
+                            className="w-12 h-12 object-cover rounded border"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded border flex items-center justify-center">
+                            <Package className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {produto.nome}
                       </TableCell>
