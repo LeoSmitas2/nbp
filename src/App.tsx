@@ -18,6 +18,7 @@ import GerenciarProdutos from "./pages/GerenciarProdutos";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import GerenciarMarketplaces from "./pages/GerenciarMarketplaces";
 import GerenciarAnuncios from "./pages/GerenciarAnuncios";
+import AdicionarAnuncio from "./pages/AdicionarAnuncio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -129,6 +130,17 @@ const App = () => (
                 <ProtectedRoute requireAdmin>
                   <Layout>
                     <GerenciarAnuncios />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/adicionar-anuncio"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Layout>
+                    <AdicionarAnuncio />
                   </Layout>
                 </ProtectedRoute>
               }

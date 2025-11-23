@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface Anuncio {
   id: string;
@@ -46,6 +47,7 @@ interface Marketplace {
 }
 
 export default function GerenciarAnuncios() {
+  const navigate = useNavigate();
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -214,122 +216,10 @@ export default function GerenciarAnuncios() {
             Visualize e gerencie todos os anúncios do sistema
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleOpenDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Anúncio
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Adicionar Anúncio Manualmente</DialogTitle>
-              <DialogDescription>
-                Cadastre um novo anúncio para monitoramento
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="url">Link do Anúncio *</Label>
-                <Input
-                  id="url"
-                  type="url"
-                  placeholder="https://exemplo.com/produto/123"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="produto">Produto *</Label>
-                  <Select value={produtoId} onValueChange={setProdutoId}>
-                    <SelectTrigger id="produto">
-                      <SelectValue placeholder="Selecione o produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {produtos.map((produto) => (
-                        <SelectItem key={produto.id} value={produto.id}>
-                          {produto.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="marketplace">Marketplace *</Label>
-                  <Select value={marketplaceId} onValueChange={setMarketplaceId}>
-                    <SelectTrigger id="marketplace">
-                      <SelectValue placeholder="Selecione o marketplace" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {marketplaces.map((marketplace) => (
-                        <SelectItem key={marketplace.id} value={marketplace.id}>
-                          {marketplace.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="preco">Preço Detectado (R$) *</Label>
-                  <Input
-                    id="preco"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    value={precoDetectado}
-                    onChange={(e) => setPrecoDetectado(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cliente">Cliente (opcional)</Label>
-                  <Select value={clienteId} onValueChange={setClienteId}>
-                    <SelectTrigger id="cliente">
-                      <SelectValue placeholder="Nenhum" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
-                      {clientes.map((cliente) => (
-                        <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.name}
-                          {cliente.empresa && ` (${cliente.empresa})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="obs">Observações (opcional)</Label>
-                <Textarea
-                  id="obs"
-                  placeholder="Informações adicionais sobre este anúncio..."
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Salvando..." : "Adicionar Anúncio"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => navigate("/adicionar-anuncio")}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Anúncio
+        </Button>
       </div>
 
       <Card className="mb-6">
