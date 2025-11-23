@@ -98,7 +98,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (emailOrUsername: string, password: string) => {
+    let email = emailOrUsername;
+    
+    // Se não contém @, é um username - buscar o email
+    if (!emailOrUsername.includes('@')) {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("username", emailOrUsername)
+        .single();
+      
+      if (profileError || !profileData) {
+        return { error: { message: "Usuário não encontrado" } };
+      }
+      
+      email = profileData.email;
+    }
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
