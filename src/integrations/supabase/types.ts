@@ -99,6 +99,38 @@ export type Database = {
           },
         ]
       }
+      contas_marketplace: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          id: string
+          marketplace: string
+          nome_conta: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          id?: string
+          marketplace: string
+          nome_conta: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          marketplace?: string
+          nome_conta?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_marketplace_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       denuncias: {
         Row: {
           cliente_id: string
@@ -224,7 +256,6 @@ export type Database = {
           email: string
           empresa: string | null
           id: string
-          lojas_marketplaces: Json | null
           name: string
           nome_contato: string | null
           telefone_contato: string | null
@@ -237,7 +268,6 @@ export type Database = {
           email: string
           empresa?: string | null
           id: string
-          lojas_marketplaces?: Json | null
           name: string
           nome_contato?: string | null
           telefone_contato?: string | null
@@ -250,7 +280,6 @@ export type Database = {
           email?: string
           empresa?: string | null
           id?: string
-          lojas_marketplaces?: Json | null
           name?: string
           nome_contato?: string | null
           telefone_contato?: string | null
