@@ -350,6 +350,12 @@ export default function AdicionarAnuncio() {
         status: novoStatus,
         cliente_id: null,
         codigo_marketplace: codigoMLB,
+        titulo_anuncio: dadosWebhook?.Titulo || null,
+        imagem: dadosWebhook?.imagem || null,
+        vendas: dadosWebhook?.vendas || null,
+        avaliacoes: dadosWebhook?.Avaliações || null,
+        desconto: dadosWebhook?.desconto || 0,
+        preco_cheio: dadosWebhook?.["preco cheio"] || 0,
       });
 
       if (error) throw error;

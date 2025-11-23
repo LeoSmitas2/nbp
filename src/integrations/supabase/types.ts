@@ -16,43 +16,61 @@ export type Database = {
     Tables: {
       anuncios_monitorados: {
         Row: {
+          avaliacoes: string | null
           cliente_id: string | null
           codigo_marketplace: string | null
+          desconto: number | null
           id: string
+          imagem: string | null
           marketplace_id: string
           origem: Database["public"]["Enums"]["ad_origin"]
+          preco_cheio: number | null
           preco_detectado: number
           preco_minimo: number
           produto_id: string
           status: Database["public"]["Enums"]["ad_status"]
+          titulo_anuncio: string | null
           ultima_atualizacao: string
           url: string
+          vendas: string | null
         }
         Insert: {
+          avaliacoes?: string | null
           cliente_id?: string | null
           codigo_marketplace?: string | null
+          desconto?: number | null
           id?: string
+          imagem?: string | null
           marketplace_id: string
           origem: Database["public"]["Enums"]["ad_origin"]
+          preco_cheio?: number | null
           preco_detectado: number
           preco_minimo: number
           produto_id: string
           status: Database["public"]["Enums"]["ad_status"]
+          titulo_anuncio?: string | null
           ultima_atualizacao?: string
           url: string
+          vendas?: string | null
         }
         Update: {
+          avaliacoes?: string | null
           cliente_id?: string | null
           codigo_marketplace?: string | null
+          desconto?: number | null
           id?: string
+          imagem?: string | null
           marketplace_id?: string
           origem?: Database["public"]["Enums"]["ad_origin"]
+          preco_cheio?: number | null
           preco_detectado?: number
           preco_minimo?: number
           produto_id?: string
           status?: Database["public"]["Enums"]["ad_status"]
+          titulo_anuncio?: string | null
           ultima_atualizacao?: string
           url?: string
+          vendas?: string | null
         }
         Relationships: [
           {
