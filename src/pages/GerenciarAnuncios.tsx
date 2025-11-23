@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle, Edit, Store } from "lucide-react";
+import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle, Edit, Store, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -64,8 +65,11 @@ export default function GerenciarAnuncios() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editingAnuncio, setEditingAnuncio] = useState<Anuncio | null>(null);
+  const [deletingAnuncio, setDeletingAnuncio] = useState<Anuncio | null>(null);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -290,6 +294,35 @@ export default function GerenciarAnuncios() {
       toast.error("Erro ao atualizar anúncio");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenDelete = (anuncio: Anuncio) => {
+    setDeletingAnuncio(anuncio);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingAnuncio) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("anuncios_monitorados")
+        .delete()
+        .eq("id", deletingAnuncio.id);
+
+      if (error) throw error;
+
+      toast.success("Anúncio excluído com sucesso!");
+      setDeleteDialogOpen(false);
+      setDeletingAnuncio(null);
+      fetchAnuncios();
+    } catch (error) {
+      console.error("Erro ao excluir anúncio:", error);
+      toast.error("Erro ao excluir anúncio");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -554,6 +587,15 @@ export default function GerenciarAnuncios() {
                             >
                               <ExternalLink className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleOpenDelete(anuncio)}
+                              title="Excluir anúncio"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -667,6 +709,41 @@ export default function GerenciarAnuncios() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este anúncio monitorado?
+              {deletingAnuncio && (
+                <div className="mt-3 p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium text-foreground">
+                    {deletingAnuncio.produtos.nome}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {deletingAnuncio.marketplaces.nome}
+                  </p>
+                </div>
+              )}
+              <p className="mt-2 text-sm">
+                Esta ação não pode ser desfeita.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
