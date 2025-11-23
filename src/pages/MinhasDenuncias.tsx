@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 interface Denuncia {
   id: string;
+  codigo_denuncia: string;
   url: string;
   preco_informado: number;
   observacoes: string | null;
@@ -36,6 +37,7 @@ export default function MinhasDenuncias() {
         .from("denuncias")
         .select(`
           id,
+          codigo_denuncia,
           url,
           preco_informado,
           observacoes,
@@ -100,11 +102,16 @@ export default function MinhasDenuncias() {
           {denuncias.map((denuncia) => (
             <Card key={denuncia.id} className="shadow-sm">
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">
-                      {denuncia.produtos.nome}
-                    </CardTitle>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CardTitle className="text-lg">
+                        {denuncia.produtos.nome}
+                      </CardTitle>
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {denuncia.codigo_denuncia}
+                      </Badge>
+                    </div>
                     <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span>Marketplace: {denuncia.marketplaces.nome}</span>
                       <span>•</span>

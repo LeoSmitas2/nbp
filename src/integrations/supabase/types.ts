@@ -144,6 +144,7 @@ export type Database = {
       denuncias: {
         Row: {
           cliente_id: string
+          codigo_denuncia: string
           comentario_admin: string | null
           created_at: string
           id: string
@@ -156,6 +157,7 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          codigo_denuncia: string
           comentario_admin?: string | null
           created_at?: string
           id?: string
@@ -168,6 +170,7 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          codigo_denuncia?: string
           comentario_admin?: string | null
           created_at?: string
           id?: string
@@ -332,6 +335,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gerar_codigo_denuncia: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
