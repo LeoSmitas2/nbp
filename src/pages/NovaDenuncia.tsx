@@ -67,17 +67,18 @@ export default function NovaDenuncia() {
   useEffect(() => {
     const verificarEBuscarDados = async () => {
       if (codigoMLB && url) {
-        // Verificar se já existe denúncia com este código
+        // Verificar se já existe denúncia ativa com este código
         const { data: denunciasExistentes, error } = await supabase
           .from("denuncias")
-          .select("id, url, produtos(nome)")
-          .eq("url", url);
+          .select("id, url, status, produtos(nome)")
+          .eq("url", url)
+          .in("status", ["Solicitada", "Em andamento"]);
 
         if (!error && denunciasExistentes && denunciasExistentes.length > 0) {
           setAnuncioExistente(true);
           setDadosWebhook(null);
           setWebhookLoading(false);
-          toast.error(`Esta URL já foi denunciada ${denunciasExistentes.length} vez(es) anteriormente.`);
+          toast.error(`Já existe uma denúncia ativa para esta URL (Status: ${denunciasExistentes[0].status}).`);
         } else {
           setAnuncioExistente(false);
           buscarDadosWebhook();
@@ -393,10 +394,10 @@ export default function NovaDenuncia() {
                 {anuncioExistente && codigoMLB && (
                   <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg animate-fade-in">
                     <p className="text-sm text-destructive font-medium">
-                      ⚠️ Esta URL já foi denunciada anteriormente
+                      ⚠️ Já existe uma denúncia ativa para esta URL
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Não é possível registrar denúncias duplicadas.
+                      Não é possível criar uma nova denúncia enquanto houver outra com status "Solicitada" ou "Em andamento".
                     </p>
                   </div>
                 )}
