@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle } from "lucide-react";
+import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle, Edit, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -24,9 +24,15 @@ interface Anuncio {
   cliente_id: string | null;
   produto_id: string;
   marketplace_id: string;
+  codigo_marketplace: string | null;
   profiles: { name: string; empresa: string | null } | null;
   produtos: { nome: string };
   marketplaces: { nome: string; logo_url: string | null };
+  conta_marketplace?: {
+    id: string;
+    nome_conta: string;
+    marketplace: string;
+  };
 }
 
 interface Cliente {
@@ -46,23 +52,33 @@ interface Marketplace {
   nome: string;
 }
 
+interface ContaMarketplace {
+  id: string;
+  nome_conta: string;
+  marketplace: string;
+}
+
 export default function GerenciarAnuncios() {
   const navigate = useNavigate();
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingAnuncio, setEditingAnuncio] = useState<Anuncio | null>(null);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [produtoFilter, setProdutoFilter] = useState<string>("all");
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
   const [clienteFilter, setClienteFilter] = useState<string>("all");
+  const [contaFilter, setContaFilter] = useState<string>("all");
 
   // Filter options
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
+  const [contasMarketplace, setContasMarketplace] = useState<ContaMarketplace[]>([]);
 
   // Form states
   const [url, setUrl] = useState("");
@@ -71,6 +87,7 @@ export default function GerenciarAnuncios() {
   const [clienteId, setClienteId] = useState("");
   const [precoDetectado, setPrecoDetectado] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [contaMarketplaceId, setContaMarketplaceId] = useState("");
 
   useEffect(() => {
     fetchFilterOptions();
@@ -78,19 +95,21 @@ export default function GerenciarAnuncios() {
 
   useEffect(() => {
     fetchAnuncios();
-  }, [statusFilter, produtoFilter, marketplaceFilter, clienteFilter]);
+  }, [statusFilter, produtoFilter, marketplaceFilter, clienteFilter, contaFilter]);
 
   const fetchFilterOptions = async () => {
     try {
-      const [clientesData, produtosData, marketplacesData] = await Promise.all([
+      const [clientesData, produtosData, marketplacesData, contasData] = await Promise.all([
         supabase.from("profiles").select("id, name, empresa").order("name"),
         supabase.from("produtos").select("id, nome, preco_minimo").eq("ativo", true).order("nome"),
         supabase.from("marketplaces").select("id, nome").eq("ativo", true).order("nome"),
+        supabase.from("contas_marketplace").select("id, nome_conta, marketplace").order("nome_conta"),
       ]);
 
       setClientes(clientesData.data || []);
       setProdutos(produtosData.data || []);
       setMarketplaces(marketplacesData.data || []);
+      setContasMarketplace(contasData.data || []);
     } catch (error) {
       console.error("Erro ao buscar opções de filtro:", error);
     }
@@ -124,7 +143,36 @@ export default function GerenciarAnuncios() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setAnuncios(data || []);
+
+      // Buscar contas de marketplace para cada anúncio
+      const anunciosComContas = await Promise.all(
+        (data || []).map(async (anuncio: any) => {
+          if (anuncio.codigo_marketplace && anuncio.marketplaces?.nome) {
+            const { data: contaData } = await supabase
+              .from("contas_marketplace")
+              .select("id, nome_conta, marketplace")
+              .eq("marketplace", anuncio.marketplaces.nome)
+              .limit(1)
+              .maybeSingle();
+
+            return {
+              ...anuncio,
+              conta_marketplace: contaData || undefined,
+            };
+          }
+          return anuncio;
+        })
+      );
+
+      // Aplicar filtro de conta
+      let anunciosFiltrados = anunciosComContas;
+      if (contaFilter !== "all") {
+        anunciosFiltrados = anunciosComContas.filter(
+          (a: any) => a.conta_marketplace?.id === contaFilter
+        );
+      }
+
+      setAnuncios(anunciosFiltrados as Anuncio[]);
     } catch (error) {
       console.error("Erro ao buscar anúncios:", error);
       toast.error("Erro ao carregar anúncios");
@@ -187,6 +235,64 @@ export default function GerenciarAnuncios() {
     }
   };
 
+  const handleOpenEdit = (anuncio: Anuncio) => {
+    setEditingAnuncio(anuncio);
+    setUrl(anuncio.url);
+    setProdutoId(anuncio.produto_id);
+    setMarketplaceId(anuncio.marketplace_id);
+    setClienteId(anuncio.cliente_id || "");
+    setPrecoDetectado(anuncio.preco_detectado.toString());
+    setContaMarketplaceId(anuncio.conta_marketplace?.id || "");
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingAnuncio || !url.trim() || !produtoId || !marketplaceId || !precoDetectado) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    const preco = parseFloat(precoDetectado);
+    if (isNaN(preco) || preco <= 0) {
+      toast.error("Preço inválido");
+      return;
+    }
+
+    const produtoSelecionado = produtos.find((p) => p.id === produtoId);
+    if (!produtoSelecionado) {
+      toast.error("Produto não encontrado");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("anuncios_monitorados")
+        .update({
+          url: url.trim(),
+          produto_id: produtoId,
+          marketplace_id: marketplaceId,
+          cliente_id: clienteId || null,
+          preco_detectado: preco,
+          preco_minimo: produtoSelecionado.preco_minimo,
+          status: preco < produtoSelecionado.preco_minimo ? "Abaixo do mínimo" : "OK",
+        })
+        .eq("id", editingAnuncio.id);
+
+      if (error) throw error;
+
+      toast.success("Anúncio atualizado com sucesso!");
+      setEditDialogOpen(false);
+      setEditingAnuncio(null);
+      fetchAnuncios();
+    } catch (error) {
+      console.error("Erro ao atualizar anúncio:", error);
+      toast.error("Erro ao atualizar anúncio");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     return status === "OK"
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
@@ -227,7 +333,7 @@ export default function GerenciarAnuncios() {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status-filter">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -293,6 +399,23 @@ export default function GerenciarAnuncios() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="conta-filter">Conta</Label>
+              <Select value={contaFilter} onValueChange={setContaFilter}>
+                <SelectTrigger id="conta-filter">
+                  <SelectValue placeholder="Todas as contas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {contasMarketplace.map((conta) => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      {conta.nome_conta} ({conta.marketplace})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -316,6 +439,7 @@ export default function GerenciarAnuncios() {
                   <TableRow>
                     <TableHead>Produto</TableHead>
                     <TableHead>Marketplace</TableHead>
+                    <TableHead>Conta</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Preço Detectado</TableHead>
                     <TableHead>Preço Mínimo</TableHead>
@@ -323,14 +447,11 @@ export default function GerenciarAnuncios() {
                     <TableHead>Status</TableHead>
                     <TableHead>Origem</TableHead>
                     <TableHead>Atualização</TableHead>
-                    <TableHead className="text-right">Link</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {anuncios.map((anuncio) => {
-                    const diferenca = anuncio.preco_detectado - anuncio.preco_minimo;
-                    const percentual = ((diferenca / anuncio.preco_minimo) * 100).toFixed(1);
-
                     return (
                       <TableRow key={anuncio.id}>
                         <TableCell className="font-medium">
@@ -347,6 +468,16 @@ export default function GerenciarAnuncios() {
                             )}
                             {anuncio.marketplaces.nome}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {anuncio.conta_marketplace ? (
+                            <div className="flex items-center gap-1">
+                              <Store className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-sm">{anuncio.conta_marketplace.nome_conta}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {anuncio.profiles ? (
@@ -375,25 +506,20 @@ export default function GerenciarAnuncios() {
                           }).format(anuncio.preco_minimo)}
                         </TableCell>
                         <TableCell>
-                          <div
-                            className={`flex items-center gap-1 ${
-                              diferenca < 0 ? "text-red-600" : "text-green-600"
-                            }`}
-                          >
-                            {diferenca < 0 ? (
+                          {anuncio.preco_detectado < anuncio.preco_minimo ? (
+                            <div className="flex items-center gap-1 text-red-600">
                               <TrendingDown className="h-4 w-4" />
-                            ) : (
-                              <TrendingUp className="h-4 w-4" />
-                            )}
-                            <span className="text-sm font-medium">
-                              {diferenca < 0 ? "" : "+"}
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(diferenca)}{" "}
-                              ({percentual}%)
-                            </span>
-                          </div>
+                              <span className="text-sm font-medium">
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                }).format(anuncio.preco_detectado - anuncio.preco_minimo)}{" "}
+                                ({(((anuncio.preco_detectado - anuncio.preco_minimo) / anuncio.preco_minimo) * 100).toFixed(1)}%)
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(anuncio.status)}>
@@ -411,14 +537,24 @@ export default function GerenciarAnuncios() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => window.open(anuncio.url, "_blank")}
-                            title="Ver anúncio"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenEdit(anuncio)}
+                              title="Editar anúncio"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.open(anuncio.url, "_blank")}
+                              title="Ver anúncio"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -429,6 +565,108 @@ export default function GerenciarAnuncios() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de Edição */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Anúncio</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do anúncio monitorado
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-url">URL do Anúncio *</Label>
+              <Input
+                id="edit-url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-produto">Produto *</Label>
+                <Select value={produtoId} onValueChange={setProdutoId}>
+                  <SelectTrigger id="edit-produto">
+                    <SelectValue placeholder="Selecione o produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {produtos.map((produto) => (
+                      <SelectItem key={produto.id} value={produto.id}>
+                        {produto.nome} (R$ {produto.preco_minimo.toFixed(2)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-marketplace">Marketplace *</Label>
+                <Select value={marketplaceId} onValueChange={setMarketplaceId}>
+                  <SelectTrigger id="edit-marketplace">
+                    <SelectValue placeholder="Selecione o marketplace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {marketplaces.map((marketplace) => (
+                      <SelectItem key={marketplace.id} value={marketplace.id}>
+                        {marketplace.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-cliente">Cliente</Label>
+                <Select value={clienteId} onValueChange={setClienteId}>
+                  <SelectTrigger id="edit-cliente">
+                    <SelectValue placeholder="Selecione o cliente (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum</SelectItem>
+                    {clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.name}
+                        {cliente.empresa && ` (${cliente.empresa})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-preco">Preço Detectado *</Label>
+                <Input
+                  id="edit-preco"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={precoDetectado}
+                  onChange={(e) => setPrecoDetectado(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
