@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield } from "lucide-react";
+import { Shield, Plus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Cadastro() {
   const [email, setEmail] = useState("");
@@ -15,10 +16,30 @@ export default function Cadastro() {
   const [username, setUsername] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [cnpj, setCnpj] = useState("");
-  const [nomeLojas, setNomeLojas] = useState("");
+  const [lojas, setLojas] = useState<Array<{ nome: string; marketplace: string }>>([
+    { nome: "", marketplace: "" }
+  ]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const marketplaces = ["Mercado Livre", "Shopee", "Amazon", "Magalu", "Americanas"];
+
+  const addLoja = () => {
+    setLojas([...lojas, { nome: "", marketplace: "" }]);
+  };
+
+  const removeLoja = (index: number) => {
+    if (lojas.length > 1) {
+      setLojas(lojas.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateLoja = (index: number, field: "nome" | "marketplace", value: string) => {
+    const newLojas = [...lojas];
+    newLojas[index][field] = value;
+    setLojas(newLojas);
+  };
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -39,14 +60,22 @@ export default function Cadastro() {
       return;
     }
 
-    if (!empresa || !cnpj || !username || !nomeLojas) {
+    if (!empresa || !cnpj || !username) {
       setError("Por favor, preencha todos os campos obrigatórios");
       setLoading(false);
       return;
     }
 
+    // Validate lojas
+    const lojasValidas = lojas.filter(l => l.nome.trim() && l.marketplace);
+    if (lojasValidas.length === 0) {
+      setError("Adicione pelo menos uma loja com marketplace");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error } = await signUp(email, password, username, empresa, cnpj, nomeLojas);
+      const { error } = await signUp(email, password, username, empresa, cnpj, lojasValidas);
 
       if (error) {
         if (error.message.includes("already registered")) {
@@ -171,16 +200,59 @@ export default function Cadastro() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="nomeLojas">Nome das Lojas no Marketplace</Label>
-                  <Input
-                    id="nomeLojas"
-                    type="text"
-                    placeholder="Nome das suas lojas"
-                    value={nomeLojas}
-                    onChange={(e) => setNomeLojas(e.target.value)}
-                    required
-                  />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Lojas nos Marketplaces</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addLoja}
+                      className="h-8"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar Loja
+                    </Button>
+                  </div>
+                  
+                  {lojas.map((loja, index) => (
+                    <div key={index} className="flex gap-2 items-start border border-border rounded-lg p-3">
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          placeholder="Nome da loja"
+                          value={loja.nome}
+                          onChange={(e) => updateLoja(index, "nome", e.target.value)}
+                          required
+                        />
+                        <Select
+                          value={loja.marketplace}
+                          onValueChange={(value) => updateLoja(index, "marketplace", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o marketplace" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {marketplaces.map((mp) => (
+                              <SelectItem key={mp} value={mp}>
+                                {mp}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {lojas.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLoja(index)}
+                          className="h-10 w-10 mt-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
