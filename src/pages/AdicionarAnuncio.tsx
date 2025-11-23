@@ -57,7 +57,16 @@ export default function AdicionarAnuncio() {
   useEffect(() => {
     detectarMarketplace();
     extrairCodigoMLB();
-  }, [url]);
+    
+    // Capturar screenshot automaticamente após 2 segundos de inatividade
+    const timer = setTimeout(() => {
+      if (url && marketplaceDetectado) {
+        capturarScreenshot();
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [url, marketplaceDetectado]);
 
   const fetchData = async () => {
     try {
@@ -325,17 +334,24 @@ export default function AdicionarAnuncio() {
                       disabled={capturandoScreenshot || !url}
                     >
                       <Camera className="mr-2 h-4 w-4" />
-                      {capturandoScreenshot ? "Capturando..." : "Capturar Screenshot"}
+                      {capturandoScreenshot ? "Atualizar" : "Capturar Novamente"}
                     </Button>
                   </div>
                   
-                  {screenshot ? (
-                    <div className="border rounded-lg overflow-hidden bg-muted/30">
-                      <div className="p-3 bg-muted/50 border-b">
-                        <p className="text-xs text-muted-foreground truncate" title={url}>
-                          {url}
-                        </p>
+                  <div className="border rounded-lg overflow-hidden bg-muted/30">
+                    <div className="p-3 bg-muted/50 border-b">
+                      <p className="text-xs text-muted-foreground truncate" title={url}>
+                        {url}
+                      </p>
+                    </div>
+                    {capturandoScreenshot ? (
+                      <div className="relative w-full h-96 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                          <p className="text-sm text-muted-foreground">Capturando preview...</p>
+                        </div>
                       </div>
+                    ) : screenshot ? (
                       <div className="relative w-full">
                         <img 
                           src={screenshot} 
@@ -343,40 +359,17 @@ export default function AdicionarAnuncio() {
                           className="w-full h-auto"
                         />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="border rounded-lg overflow-hidden bg-muted/30">
-                      <div className="p-3 bg-muted/50 border-b">
-                        <p className="text-xs text-muted-foreground truncate" title={url}>
-                          {url}
-                        </p>
+                    ) : (
+                      <div className="relative w-full h-96 flex items-center justify-center">
+                        <div className="text-center text-sm text-muted-foreground">
+                          <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Aguardando captura do preview...</p>
+                        </div>
                       </div>
-                      <div className="relative w-full h-96">
-                        <iframe
-                          src={url}
-                          className="w-full h-full"
-                          sandbox="allow-same-origin"
-                          title="Pré-visualização do anúncio"
-                          onError={(e) => {
-                            const iframe = e.currentTarget;
-                            const parent = iframe.parentElement;
-                            if (parent) {
-                              parent.innerHTML = `
-                                <div class="flex items-center justify-center h-full text-sm text-muted-foreground p-4 text-center">
-                                  <div>
-                                    <p class="mb-2">⚠️ Não foi possível carregar a pré-visualização</p>
-                                    <p class="text-xs">O site não permite visualização em iframe</p>
-                                  </div>
-                                </div>
-                              `;
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {screenshot ? "Screenshot capturado da página" : "Pré-visualização do anúncio (alguns sites podem bloquear esta visualização)"}
+                    Preview capturado automaticamente • Sem bloqueios de iframe
                   </p>
                 </div>
               )}
