@@ -142,9 +142,25 @@ export default function DashboardAdmin() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Link to="/anuncios/adicionar">
+              <Link to="/adicionar-anuncio">
                 <Button className="w-full" variant="outline">
                   Cadastrar Manualmente
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Store className="mr-2 h-5 w-5" />
+                Contas Marketplaces
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link to="/contas-marketplaces">
+                <Button className="w-full" variant="outline">
+                  Gerenciar Contas
                 </Button>
               </Link>
             </CardContent>

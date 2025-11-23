@@ -19,6 +19,7 @@ import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import GerenciarMarketplaces from "./pages/GerenciarMarketplaces";
 import GerenciarAnuncios from "./pages/GerenciarAnuncios";
 import AdicionarAnuncio from "./pages/AdicionarAnuncio";
+import ContasMarketplaces from "./pages/ContasMarketplaces";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -141,6 +142,17 @@ const App = () => (
                 <ProtectedRoute requireAdmin>
                   <Layout>
                     <AdicionarAnuncio />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/contas-marketplaces"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Layout>
+                    <ContasMarketplaces />
                   </Layout>
                 </ProtectedRoute>
               }
