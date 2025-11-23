@@ -194,8 +194,8 @@ export type Database = {
           email: string
           empresa: string | null
           id: string
+          lojas_marketplaces: Json | null
           name: string
-          nome_lojas_marketplace: string | null
           updated_at: string
           username: string | null
         }
@@ -205,8 +205,8 @@ export type Database = {
           email: string
           empresa?: string | null
           id: string
+          lojas_marketplaces?: Json | null
           name: string
-          nome_lojas_marketplace?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -216,8 +216,8 @@ export type Database = {
           email?: string
           empresa?: string | null
           id?: string
+          lojas_marketplaces?: Json | null
           name?: string
-          nome_lojas_marketplace?: string | null
           updated_at?: string
           username?: string | null
         }
