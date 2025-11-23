@@ -33,6 +33,7 @@ export type Database = {
           ultima_atualizacao: string
           url: string
           vendas: string | null
+          vendedor: string | null
         }
         Insert: {
           avaliacoes?: string | null
@@ -52,6 +53,7 @@ export type Database = {
           ultima_atualizacao?: string
           url: string
           vendas?: string | null
+          vendedor?: string | null
         }
         Update: {
           avaliacoes?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           ultima_atualizacao?: string
           url?: string
           vendas?: string | null
+          vendedor?: string | null
         }
         Relationships: [
           {
