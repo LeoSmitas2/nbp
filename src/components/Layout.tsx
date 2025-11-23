@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Shield, LogOut, FileText, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoNash from "@/assets/logo-nash.png";
+import { NotificationBell } from "./NotificationBell";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -46,6 +47,7 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-sm font-medium">{profile?.name}</p>
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
+            <NotificationBell />
             <Button onClick={signOut} variant="outline" size="icon">
               <LogOut className="h-4 w-4" />
             </Button>
