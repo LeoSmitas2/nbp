@@ -69,7 +69,7 @@ export default function DashboardCliente() {
               <CardTitle>Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link to="/denuncia">
+              <Link to="/nova-denuncia">
                 <Button className="w-full justify-start" variant="outline">
                   <FileText className="mr-2 h-4 w-4" />
                   Nova Denúncia

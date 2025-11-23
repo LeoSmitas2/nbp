@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Shield, LogOut } from "lucide-react";
+import { Shield, LogOut, FileText, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface LayoutProps {
@@ -27,6 +27,22 @@ export function Layout({ children }: LayoutProps) {
           </Link>
 
           <div className="flex items-center space-x-4">
+            {!isAdmin && (
+              <div className="hidden md:flex items-center gap-2">
+                <Link to="/nova-denuncia">
+                  <Button variant="ghost" size="sm">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Nova Denúncia
+                  </Button>
+                </Link>
+                <Link to="/minhas-denuncias">
+                  <Button variant="ghost" size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Minhas Denúncias
+                  </Button>
+                </Link>
+              </div>
+            )}
             <div className="text-right">
               <p className="text-sm font-medium">{profile?.name}</p>
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
