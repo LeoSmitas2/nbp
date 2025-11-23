@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Shield, LogOut, FileText, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import logoNash from "@/assets/logo-nash.png";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,11 +16,9 @@ export function Layout({ children }: LayoutProps) {
       <header className="border-b bg-white shadow-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-6">
           <Link to={isAdmin ? "/dashboard" : "/dashboard-cliente"} className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
+            <img src={logoNash} alt="Nash" className="h-12 w-auto" />
             <div>
-              <h1 className="text-lg font-bold text-foreground">Brand Protection Nash</h1>
+              <h1 className="text-lg font-bold text-foreground">Brand Protection</h1>
               <p className="text-xs text-muted-foreground">
                 {isAdmin ? "Painel Administrativo" : "Portal do Cliente"}
               </p>
