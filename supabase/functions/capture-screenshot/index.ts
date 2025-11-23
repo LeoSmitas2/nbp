@@ -31,8 +31,10 @@ serve(async (req) => {
 
     console.log('Capturando screenshot com Scrappey de:', url);
 
-    // Scrappey API - https://wiki.scrappey.com/
-    const scrappeyResponse = await fetch('https://publisher.scrappey.com/api/v1', {
+    // Scrappey API - A chave vai na URL como query parameter
+    const scrappeyEndpoint = `https://publisher.scrappey.com/api/v1?key=${apiKey}`;
+    
+    const scrappeyResponse = await fetch(scrappeyEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,11 +43,9 @@ serve(async (req) => {
         cmd: 'request.get',
         url: url,
         screenshot: true,
-        screenshotOptions: {
-          fullPage: false,
-          type: 'jpeg',
-          quality: 80
-        }
+        screenshotWidth: 1280,
+        screenshotHeight: 720,
+        fullPage: false
       })
     });
 
@@ -54,36 +54,25 @@ serve(async (req) => {
     if (!scrappeyResponse.ok) {
       const errorText = await scrappeyResponse.text();
       console.error('Erro na resposta Scrappey:', errorText);
-      throw new Error(`Falha ao capturar screenshot com Scrappey: ${scrappeyResponse.status}`);
+      throw new Error(`Falha ao capturar screenshot com Scrappey: ${scrappeyResponse.status} - ${errorText}`);
     }
 
     const scrappeyData = await scrappeyResponse.json();
     console.log('Resposta Scrappey recebida');
 
-    // Scrappey retorna a sessão, agora precisamos buscar o screenshot
-    if (!scrappeyData.session) {
-      throw new Error('Sessão não retornada pela API');
-    }
-
-    // Buscar o screenshot da sessão
-    const screenshotResponse = await fetch(`https://publisher.scrappey.com/api/v1?key=${apiKey}&cmd=screenshot.get&session=${scrappeyData.session}`);
-    
-    if (!screenshotResponse.ok) {
-      throw new Error(`Falha ao obter screenshot: ${screenshotResponse.status}`);
-    }
-
-    const screenshotData = await screenshotResponse.json();
-    
-    if (!screenshotData.solution?.screenshot) {
+    // Verificar se o screenshot está na resposta
+    if (!scrappeyData.solution?.screenshot) {
+      console.error('Screenshot não encontrado na resposta:', JSON.stringify(scrappeyData));
       throw new Error('Screenshot não retornado pela API');
     }
 
+    const screenshotBase64 = scrappeyData.solution.screenshot;
     console.log('Screenshot capturado com sucesso');
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        screenshot: screenshotData.solution.screenshot,
+        screenshot: screenshotBase64.startsWith('data:') ? screenshotBase64 : `data:image/jpeg;base64,${screenshotBase64}`,
         message: 'Screenshot capturado com sucesso'
       }),
       { 
