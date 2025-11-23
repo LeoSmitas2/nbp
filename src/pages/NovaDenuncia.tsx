@@ -52,6 +52,7 @@ export default function NovaDenuncia() {
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
   const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [observacoes, setObservacoes] = useState("");
+  const [precoManual, setPrecoManual] = useState<string>("");
 
   useEffect(() => {
     fetchProdutos();
@@ -286,9 +287,20 @@ export default function NovaDenuncia() {
       return;
     }
 
-    const precoInformado = dadosWebhook?.preço || 0;
-    if (!dadosWebhook || precoInformado <= 0) {
-      toast.error("Não foi possível obter o preço do anúncio automaticamente");
+    // Verificar se temos preço manual ou automático
+    const precoManualNumerico = precoManual ? parseFloat(precoManual.replace(',', '.')) : 0;
+    const precoAutomatico = dadosWebhook?.preço || 0;
+    
+    // Usar preço manual se informado, senão usar o automático
+    const precoInformado = precoManualNumerico > 0 ? precoManualNumerico : precoAutomatico;
+    
+    if (!dadosWebhook && !precoManualNumerico) {
+      toast.error("Informe o preço do anúncio ou aguarde a busca automática");
+      return;
+    }
+    
+    if (precoInformado <= 0) {
+      toast.error("Preço informado inválido");
       return;
     }
 
@@ -319,6 +331,7 @@ export default function NovaDenuncia() {
       setUrl("");
       setProdutoId("");
       setObservacoes("");
+      setPrecoManual("");
       setDadosWebhook(null);
       setCodigoMLB(null);
       setMarketplaceDetectado(null);
@@ -486,21 +499,41 @@ export default function NovaDenuncia() {
                         )}
                       </div>
                       {produtoId && (
-                        <div className="pt-2 border-t">
+                        <div className="pt-2 border-t space-y-3">
                           {(() => {
                             const produto = produtos.find(p => p.id === produtoId);
                             if (!produto) return null;
                             const abaixoMinimo = dadosWebhook.preço < produto.preco_minimo;
                             return (
-                              <div className={`flex items-center gap-2 text-sm ${abaixoMinimo ? 'text-destructive' : 'text-green-600'}`}>
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span>
-                                  {abaixoMinimo 
-                                    ? `⚠️ Preço abaixo do mínimo (R$ ${produto.preco_minimo.toFixed(2)})`
-                                    : `✓ Preço dentro do permitido (mín: R$ ${produto.preco_minimo.toFixed(2)})`
-                                  }
-                                </span>
-                              </div>
+                              <>
+                                <div className={`flex items-center gap-2 text-sm ${abaixoMinimo ? 'text-destructive' : 'text-green-600'}`}>
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  <span>
+                                    {abaixoMinimo 
+                                      ? `⚠️ Preço abaixo do mínimo (R$ ${produto.preco_minimo.toFixed(2)})`
+                                      : `✓ Preço dentro do permitido (mín: R$ ${produto.preco_minimo.toFixed(2)})`
+                                    }
+                                  </span>
+                                </div>
+                                {!abaixoMinimo && (
+                                  <div className="space-y-2">
+                                    <Label htmlFor="preco-manual" className="text-sm">
+                                      O preço que você está vendo é diferente?
+                                    </Label>
+                                    <Input
+                                      id="preco-manual"
+                                      type="text"
+                                      placeholder="Ex: 99.90"
+                                      value={precoManual}
+                                      onChange={(e) => setPrecoManual(e.target.value)}
+                                      className="max-w-[200px]"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                      Informe o preço que você está vendo no anúncio
+                                    </p>
+                                  </div>
+                                )}
+                              </>
                             );
                           })()}
                         </div>
@@ -537,7 +570,7 @@ export default function NovaDenuncia() {
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
-                  disabled={loading || webhookLoading || !marketplaceDetectado || anuncioExistente || !dadosWebhook}
+                  disabled={loading || webhookLoading || !marketplaceDetectado || anuncioExistente}
                   className="flex-1"
                 >
                   {loading ? (
