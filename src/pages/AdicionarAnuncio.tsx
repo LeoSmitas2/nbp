@@ -29,6 +29,18 @@ interface Marketplace {
   url_base: string;
 }
 
+interface DadosWebhook {
+  preço: number;
+  Titulo: string;
+  vendas: string;
+  Avaliações: string;
+  "Vendido Por": string;
+  imagem: string;
+  ML: string;
+  desconto: number;
+  "preco cheio": number;
+}
+
 export default function AdicionarAnuncio() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,6 +49,7 @@ export default function AdicionarAnuncio() {
   const [loading, setLoading] = useState(false);
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<string>("");
+  const [dadosWebhook, setDadosWebhook] = useState<DadosWebhook | null>(null);
   const [url, setUrl] = useState("");
   const [produtoId, setProdutoId] = useState("");
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
@@ -58,6 +71,15 @@ export default function AdicionarAnuncio() {
     detectarMarketplace();
     extrairCodigoMLB();
   }, [url]);
+
+  // Disparar webhook automaticamente quando tiver MLB
+  useEffect(() => {
+    if (codigoMLB && url) {
+      buscarDadosWebhook();
+    } else {
+      setDadosWebhook(null);
+    }
+  }, [codigoMLB]);
 
   const fetchData = async () => {
     try {
@@ -140,6 +162,52 @@ export default function AdicionarAnuncio() {
     }
   };
 
+  const buscarDadosWebhook = async () => {
+    if (!codigoMLB) return;
+
+    setWebhookLoading(true);
+    setWebhookStatus("Buscando informações do produto...");
+    setDadosWebhook(null);
+
+    try {
+      const webhookResponse = await fetch(
+        `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
+        { method: "GET" }
+      );
+
+      if (webhookResponse.ok) {
+        const webhookData = await webhookResponse.json();
+
+        if (Array.isArray(webhookData) && webhookData.length > 0 && webhookData[0].data) {
+          const data = webhookData[0].data[0];
+          setDadosWebhook(data);
+          setWebhookStatus("");
+        } else {
+          toast({
+            title: "Erro ao buscar dados",
+            description: "Não foi possível obter informações do produto.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Erro na webhook",
+          description: "Não foi possível conectar ao serviço de dados.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar webhook:", error);
+      toast({
+        title: "Erro de conexão",
+        description: "Não foi possível buscar os dados do produto.",
+        variant: "destructive",
+      });
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,102 +246,35 @@ export default function AdicionarAnuncio() {
         throw new Error("Produto não encontrado");
       }
 
-      // Inserir anúncio com preço detectado zerado (será atualizado posteriormente)
+      // Inserir anúncio com dados da webhook
+      const precoDetectado = dadosWebhook?.preço || 0;
+      const novoStatus = precoDetectado < produto.preco_minimo ? "Abaixo do mínimo" : "OK";
+      
       const { error } = await supabase.from("anuncios_monitorados").insert({
         url: validatedData.url,
         produto_id: validatedData.produto_id,
         marketplace_id: marketplaceEncontrado.id,
-        preco_detectado: 0,
+        preco_detectado: precoDetectado,
         preco_minimo: produto.preco_minimo,
         origem: "Manual",
-        status: "OK",
+        status: novoStatus,
         cliente_id: null,
         codigo_marketplace: codigoMLB,
       });
 
       if (error) throw error;
 
-      // Acionar webhook e aguardar resposta
-      if (codigoMLB) {
-        setWebhookLoading(true);
-        setWebhookStatus("Processando anúncio...");
-        
-        try {
-          const webhookResponse = await fetch(
-            `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`, 
-            { method: "GET" }
-          );
-          
-          setWebhookStatus("Recebendo dados...");
-          
-          if (webhookResponse.ok) {
-            const webhookData = await webhookResponse.json();
-            
-            setWebhookStatus("Atualizando preços...");
-            
-            // Processar dados retornados
-            if (Array.isArray(webhookData) && webhookData.length > 0 && webhookData[0].data) {
-              const data = webhookData[0].data[0];
-              
-              // Buscar o anúncio recém criado para atualizar
-              const { data: anuncioData, error: fetchError } = await supabase
-                .from("anuncios_monitorados")
-                .select("id")
-                .eq("codigo_marketplace", codigoMLB)
-                .order("ultima_atualizacao", { ascending: false })
-                .limit(1)
-                .single();
+      toast({
+        title: "Anúncio adicionado com sucesso!",
+        description: "O anúncio foi cadastrado no sistema.",
+      });
 
-              if (!fetchError && anuncioData) {
-                // Atualizar anúncio com dados da webhook
-                const precoDetectado = data.preço || 0;
-                const produtoInfo = produtos.find((p) => p.id === produtoId);
-                const novoStatus = precoDetectado < (produtoInfo?.preco_minimo || 0) 
-                  ? "Abaixo do mínimo" 
-                  : "OK";
-
-                await supabase
-                  .from("anuncios_monitorados")
-                  .update({
-                    preco_detectado: precoDetectado,
-                    status: novoStatus,
-                    ultima_atualizacao: new Date().toISOString()
-                  })
-                  .eq("id", anuncioData.id);
-              }
-            }
-            
-            setWebhookStatus("Concluído!");
-            toast({
-              title: "Anúncio adicionado com sucesso!",
-              description: "O anúncio foi cadastrado e os dados foram atualizados.",
-            });
-          } else {
-            toast({
-              title: "Anúncio adicionado",
-              description: "O anúncio foi cadastrado, mas houve um problema ao processar o webhook.",
-              variant: "destructive",
-            });
-          }
-        } catch (webhookError) {
-          console.error("Erro ao acionar webhook:", webhookError);
-          toast({
-            title: "Anúncio adicionado",
-            description: "O anúncio foi cadastrado, mas o webhook não retornou dados válidos.",
-            variant: "destructive",
-          });
-        } finally {
-          setWebhookLoading(false);
-          setWebhookStatus("");
-        }
-      } else {
-        toast({
-          title: "Anúncio adicionado com sucesso!",
-          description: "O anúncio foi cadastrado no sistema.",
-        });
-      }
-
-      navigate("/gerenciar-anuncios");
+      // Limpar formulário
+      setUrl("");
+      setProdutoId("");
+      setDadosWebhook(null);
+      setCodigoMLB(null);
+      setMarketplaceDetectado(null);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -380,12 +381,92 @@ export default function AdicionarAnuncio() {
                 </div>
               )}
 
+              {/* Dados retornados da webhook */}
+              {dadosWebhook && !webhookLoading && (
+                <div className="space-y-4 p-4 bg-card rounded-lg border animate-fade-in">
+                  <div className="flex items-start gap-4">
+                    {dadosWebhook.imagem && (
+                      <img 
+                        src={dadosWebhook.imagem} 
+                        alt={dadosWebhook.Titulo}
+                        className="w-24 h-24 object-cover rounded-md border"
+                      />
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <h3 className="font-semibold text-lg">{dadosWebhook.Titulo}</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Preço:</span>
+                          <span className="ml-2 font-semibold text-primary">
+                            R$ {dadosWebhook.preço.toFixed(2)}
+                          </span>
+                        </div>
+                        {dadosWebhook["preco cheio"] > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Preço cheio:</span>
+                            <span className="ml-2 line-through text-muted-foreground">
+                              R$ {dadosWebhook["preco cheio"].toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {dadosWebhook.desconto > 0 && (
+                          <div>
+                            <Badge variant="secondary" className="text-xs">
+                              {dadosWebhook.desconto}% OFF
+                            </Badge>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-muted-foreground">Vendas:</span>
+                          <span className="ml-2">{dadosWebhook.vendas}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Avaliações:</span>
+                          <span className="ml-2">{dadosWebhook.Avaliações}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Vendedor:</span>
+                          <span className="ml-2">{dadosWebhook["Vendido Por"]}</span>
+                        </div>
+                        {dadosWebhook.ML && (
+                          <div className="col-span-2">
+                            <Badge variant="outline" className="text-xs">
+                              {dadosWebhook.ML}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      {produtoId && (
+                        <div className="pt-2 border-t">
+                          {(() => {
+                            const produto = produtos.find(p => p.id === produtoId);
+                            if (!produto) return null;
+                            const abaixoMinimo = dadosWebhook.preço < produto.preco_minimo;
+                            return (
+                              <div className={`flex items-center gap-2 text-sm ${abaixoMinimo ? 'text-destructive' : 'text-green-600'}`}>
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span>
+                                  {abaixoMinimo 
+                                    ? `⚠️ Preço abaixo do mínimo (R$ ${produto.preco_minimo.toFixed(2)})`
+                                    : `✓ Preço dentro do permitido (mín: R$ ${produto.preco_minimo.toFixed(2)})`
+                                  }
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading || webhookLoading || !marketplaceDetectado} className="flex-1">
-                  {loading || webhookLoading ? (
+                <Button type="submit" disabled={loading || webhookLoading || !marketplaceDetectado || !dadosWebhook} className="flex-1">
+                  {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {webhookLoading ? "Processando..." : "Adicionando..."}
+                      Adicionando...
                     </>
                   ) : (
                     "Adicionar Anúncio"
