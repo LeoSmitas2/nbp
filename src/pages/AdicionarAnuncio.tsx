@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle2, Camera } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 
@@ -40,8 +40,6 @@ export default function AdicionarAnuncio() {
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
   const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [screenshot, setScreenshot] = useState<string | null>(null);
-  const [capturandoScreenshot, setCapturandoScreenshot] = useState(false);
   
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
@@ -57,16 +55,7 @@ export default function AdicionarAnuncio() {
   useEffect(() => {
     detectarMarketplace();
     extrairCodigoMLB();
-    
-    // Capturar screenshot automaticamente após 2 segundos de inatividade
-    const timer = setTimeout(() => {
-      if (url && marketplaceDetectado) {
-        capturarScreenshot();
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [url, marketplaceDetectado]);
+  }, [url]);
 
   const fetchData = async () => {
     try {
@@ -149,44 +138,6 @@ export default function AdicionarAnuncio() {
     }
   };
 
-  const capturarScreenshot = async () => {
-    if (!url) {
-      toast({
-        title: "URL necessária",
-        description: "Informe uma URL válida antes de capturar o screenshot",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCapturandoScreenshot(true);
-    setScreenshot(null);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('capture-screenshot', {
-        body: { url }
-      });
-
-      if (error) throw error;
-
-      if (data?.screenshot) {
-        setScreenshot(data.screenshot);
-        toast({
-          title: "Screenshot capturado!",
-          description: "O screenshot foi obtido com sucesso",
-        });
-      }
-    } catch (error: any) {
-      console.error('Erro ao capturar screenshot:', error);
-      toast({
-        title: "Erro ao capturar screenshot",
-        description: error.message || "Não foi possível capturar o screenshot da página",
-        variant: "destructive",
-      });
-    } finally {
-      setCapturandoScreenshot(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,58 +272,6 @@ export default function AdicionarAnuncio() {
                   </p>
                 )}
               </div>
-
-              {url && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Pré-visualização do Link</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={capturarScreenshot}
-                      disabled={capturandoScreenshot || !url}
-                    >
-                      <Camera className="mr-2 h-4 w-4" />
-                      {capturandoScreenshot ? "Atualizar" : "Capturar Novamente"}
-                    </Button>
-                  </div>
-                  
-                  <div className="border rounded-lg overflow-hidden bg-muted/30">
-                    <div className="p-3 bg-muted/50 border-b">
-                      <p className="text-xs text-muted-foreground truncate" title={url}>
-                        {url}
-                      </p>
-                    </div>
-                    {capturandoScreenshot ? (
-                      <div className="relative w-full h-96 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                          <p className="text-sm text-muted-foreground">Capturando preview...</p>
-                        </div>
-                      </div>
-                    ) : screenshot ? (
-                      <div className="relative w-full">
-                        <img 
-                          src={screenshot} 
-                          alt="Screenshot do anúncio" 
-                          className="w-full h-auto"
-                        />
-                      </div>
-                    ) : (
-                      <div className="relative w-full h-96 flex items-center justify-center">
-                        <div className="text-center text-sm text-muted-foreground">
-                          <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>Aguardando captura do preview...</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Preview capturado automaticamente • Sem bloqueios de iframe
-                  </p>
-                </div>
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="produto_id">Produto *</Label>
