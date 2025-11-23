@@ -68,11 +68,11 @@ export default function Login() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email ou Nome de Usuário</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="seu@email.com"
+                  type="text"
+                  placeholder="seu@email.com ou seu_usuario"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
