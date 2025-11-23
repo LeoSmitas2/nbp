@@ -18,7 +18,6 @@ interface Usuario {
   empresa: string | null;
   cnpj: string | null;
   username: string | null;
-  lojas_marketplaces: any;
   created_at: string;
   user_roles: {
     role: "ADMIN" | "CLIENT";
@@ -427,27 +426,6 @@ export default function GerenciarUsuarios() {
                   Administradores têm acesso total ao sistema
                 </p>
               </div>
-
-              {editingUsuario.lojas_marketplaces &&
-                typeof editingUsuario.lojas_marketplaces === "string" &&
-                JSON.parse(editingUsuario.lojas_marketplaces).length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Lojas nos Marketplaces</Label>
-                    <div className="space-y-2">
-                      {JSON.parse(editingUsuario.lojas_marketplaces).map(
-                        (loja: any, index: number) => (
-                          <div
-                            key={index}
-                            className="p-2 bg-muted rounded text-sm"
-                          >
-                            <span className="font-medium">{loja.nome}</span> -{" "}
-                            {loja.marketplace}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
             </div>
           )}
 

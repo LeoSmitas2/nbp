@@ -11,9 +11,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Pencil, Plus, Trash2, Store, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface Loja {
-  nome: string;
+interface ContaMarketplace {
+  id: string;
+  nome_conta: string;
   marketplace: string;
+  cliente_id: string;
+  created_at: string;
 }
 
 interface Cliente {
@@ -21,112 +24,143 @@ interface Cliente {
   name: string;
   empresa: string;
   email: string;
-  lojas_marketplaces: Loja[];
 }
 
-interface ContaExpandida {
-  nomeConta: string;
-  marketplace: string;
-  clienteId: string;
-  clienteNome: string;
-  clienteEmpresa: string;
-  clienteEmail: string;
+interface ContaComCliente extends ContaMarketplace {
+  cliente: Cliente;
 }
 
 export default function ContasMarketplaces() {
+  const [contas, setContas] = useState<ContaComCliente[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [contasExpandidas, setContasExpandidas] = useState<ContaExpandida[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [lojas, setLojas] = useState<Loja[]>([]);
+  const [editingClienteId, setEditingClienteId] = useState<string | null>(null);
+  const [contasCliente, setContasCliente] = useState<{ nome: string; marketplace: string }[]>([]);
 
   const marketplaces = ["Mercado Livre", "Shopee", "Amazon", "Magalu", "Americanas"];
 
   useEffect(() => {
+    fetchContas();
     fetchClientes();
   }, []);
 
-  const fetchClientes = async () => {
+  const fetchContas = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, empresa, email, lojas_marketplaces")
-        .order("name");
+        .from("contas_marketplace")
+        .select(`
+          id,
+          nome_conta,
+          marketplace,
+          cliente_id,
+          created_at,
+          cliente:profiles!contas_marketplace_cliente_id_fkey (
+            id,
+            name,
+            empresa,
+            email
+          )
+        `)
+        .order("nome_conta");
 
       if (error) throw error;
 
-      const clientesFormatados = (data || []).map(cliente => ({
-        ...cliente,
-        lojas_marketplaces: Array.isArray(cliente.lojas_marketplaces) 
-          ? (cliente.lojas_marketplaces as unknown as Loja[])
-          : []
-      }));
+      const contasFormatadas = (data || []).map(conta => ({
+        ...conta,
+        cliente: conta.cliente as unknown as Cliente
+      })) as ContaComCliente[];
 
-      setClientes(clientesFormatados);
-
-      // Expandir as contas para uma linha por loja
-      const contas: ContaExpandida[] = [];
-      clientesFormatados.forEach(cliente => {
-        if (Array.isArray(cliente.lojas_marketplaces) && cliente.lojas_marketplaces.length > 0) {
-          cliente.lojas_marketplaces.forEach(loja => {
-            contas.push({
-              nomeConta: loja.nome,
-              marketplace: loja.marketplace,
-              clienteId: cliente.id,
-              clienteNome: cliente.name,
-              clienteEmpresa: cliente.empresa || "-",
-              clienteEmail: cliente.email
-            });
-          });
-        }
-      });
-      setContasExpandidas(contas);
+      setContas(contasFormatadas);
     } catch (error) {
-      console.error("Erro ao buscar clientes:", error);
-      toast.error("Erro ao carregar clientes");
+      console.error("Erro ao buscar contas:", error);
+      toast.error("Erro ao carregar contas");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (cliente: Cliente) => {
-    setEditingCliente(cliente);
-    setLojas(Array.isArray(cliente.lojas_marketplaces) ? cliente.lojas_marketplaces : []);
+  const fetchClientes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, name, empresa, email")
+        .order("name");
+
+      if (error) throw error;
+
+      setClientes(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar clientes:", error);
+    }
+  };
+
+  const handleEdit = async (clienteId: string) => {
+    setEditingClienteId(clienteId);
+    
+    // Buscar contas do cliente
+    const { data, error } = await supabase
+      .from("contas_marketplace")
+      .select("nome_conta, marketplace")
+      .eq("cliente_id", clienteId);
+
+    if (error) {
+      console.error("Erro ao buscar contas:", error);
+      toast.error("Erro ao carregar contas do cliente");
+      return;
+    }
+
+    setContasCliente(data?.map(c => ({ nome: c.nome_conta, marketplace: c.marketplace })) || []);
     setIsDialogOpen(true);
   };
 
   const addLoja = () => {
-    setLojas([...lojas, { nome: "", marketplace: "" }]);
+    setContasCliente([...contasCliente, { nome: "", marketplace: "" }]);
   };
 
   const removeLoja = (index: number) => {
-    setLojas(lojas.filter((_, i) => i !== index));
+    setContasCliente(contasCliente.filter((_, i) => i !== index));
   };
 
   const updateLoja = (index: number, field: "nome" | "marketplace", value: string) => {
-    const newLojas = [...lojas];
-    newLojas[index][field] = value;
-    setLojas(newLojas);
+    const newContas = [...contasCliente];
+    newContas[index][field] = value;
+    setContasCliente(newContas);
   };
 
   const handleSave = async () => {
-    if (!editingCliente) return;
+    if (!editingClienteId) return;
 
     try {
-      const lojasValidas = lojas.filter(l => l.nome.trim() && l.marketplace);
+      // Remover contas antigas do cliente
+      const { error: deleteError } = await supabase
+        .from("contas_marketplace")
+        .delete()
+        .eq("cliente_id", editingClienteId);
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ lojas_marketplaces: lojasValidas as any })
-        .eq("id", editingCliente.id);
+      if (deleteError) throw deleteError;
 
-      if (error) throw error;
+      // Adicionar novas contas válidas
+      const contasValidas = contasCliente
+        .filter(c => c.nome.trim() && c.marketplace)
+        .map(c => ({
+          nome_conta: c.nome,
+          marketplace: c.marketplace,
+          cliente_id: editingClienteId
+        }));
+
+      if (contasValidas.length > 0) {
+        const { error: insertError } = await supabase
+          .from("contas_marketplace")
+          .insert(contasValidas);
+
+        if (insertError) throw insertError;
+      }
 
       toast.success("Contas atualizadas com sucesso");
       setIsDialogOpen(false);
-      fetchClientes();
+      fetchContas();
     } catch (error) {
       console.error("Erro ao salvar:", error);
       toast.error("Erro ao atualizar contas");
@@ -162,7 +196,7 @@ export default function ContasMarketplaces() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {contasExpandidas.length === 0 ? (
+          {contas.length === 0 ? (
             <Alert>
               <AlertDescription>Nenhuma conta cadastrada ainda.</AlertDescription>
             </Alert>
@@ -179,31 +213,28 @@ export default function ContasMarketplaces() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {contasExpandidas.map((conta, index) => (
-                  <TableRow key={`${conta.clienteId}-${index}`}>
-                    <TableCell className="font-medium">{conta.nomeConta}</TableCell>
+                {contas.map((conta) => (
+                  <TableRow key={conta.id}>
+                    <TableCell className="font-medium">{conta.nome_conta}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Store className="h-4 w-4 text-muted-foreground" />
                         {conta.marketplace}
                       </div>
                     </TableCell>
-                    <TableCell>{conta.clienteNome}</TableCell>
+                    <TableCell>{conta.cliente.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {conta.clienteEmpresa}
+                        {conta.cliente.empresa || "-"}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{conta.clienteEmail}</TableCell>
+                    <TableCell className="text-muted-foreground">{conta.cliente.email}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
-                          const cliente = clientes.find(c => c.id === conta.clienteId);
-                          if (cliente) handleEdit(cliente);
-                        }}
+                        onClick={() => handleEdit(conta.cliente_id)}
                         title="Editar contas do cliente"
                       >
                         <Pencil className="h-4 w-4" />
@@ -222,7 +253,7 @@ export default function ContasMarketplaces() {
           <DialogHeader>
             <DialogTitle>Editar Contas do Marketplace</DialogTitle>
             <DialogDescription>
-              Cliente: {editingCliente?.name} - {editingCliente?.empresa}
+              {editingClienteId && clientes.find(c => c.id === editingClienteId)?.name}
             </DialogDescription>
           </DialogHeader>
 
@@ -240,7 +271,7 @@ export default function ContasMarketplaces() {
               </Button>
             </div>
 
-            {lojas.length === 0 ? (
+            {contasCliente.length === 0 ? (
               <Alert>
                 <AlertDescription>
                   Nenhuma loja cadastrada. Clique em "Adicionar Loja" para começar.
@@ -248,7 +279,7 @@ export default function ContasMarketplaces() {
               </Alert>
             ) : (
               <div className="space-y-3">
-                {lojas.map((loja, index) => (
+                {contasCliente.map((conta, index) => (
                   <div key={index} className="flex gap-2 items-start border rounded-lg p-3">
                     <div className="flex-1 space-y-3">
                       <div className="space-y-2">
@@ -256,14 +287,14 @@ export default function ContasMarketplaces() {
                         <Input
                           id={`nome-${index}`}
                           placeholder="Nome da loja"
-                          value={loja.nome}
+                          value={conta.nome}
                           onChange={(e) => updateLoja(index, "nome", e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`marketplace-${index}`}>Marketplace</Label>
                         <Select
-                          value={loja.marketplace}
+                          value={conta.marketplace}
                           onValueChange={(value) => updateLoja(index, "marketplace", value)}
                         >
                           <SelectTrigger id={`marketplace-${index}`}>
