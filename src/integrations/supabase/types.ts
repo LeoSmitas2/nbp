@@ -101,21 +101,21 @@ export type Database = {
       }
       contas_marketplace: {
         Row: {
-          cliente_id: string
+          cliente_id: string | null
           created_at: string
           id: string
           marketplace: string
           nome_conta: string
         }
         Insert: {
-          cliente_id: string
+          cliente_id?: string | null
           created_at?: string
           id?: string
           marketplace: string
           nome_conta: string
         }
         Update: {
-          cliente_id?: string
+          cliente_id?: string | null
           created_at?: string
           id?: string
           marketplace?: string
