@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield } from "lucide-react";
+import logoNash from "@/assets/logo-nash.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -47,10 +48,10 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">
       <div className="w-full max-w-md animate-slide-up">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-nash">
-            <Shield className="h-8 w-8 text-primary" />
+          <div className="mx-auto mb-4 flex h-20 items-center justify-center">
+            <img src={logoNash} alt="Nash" className="h-20 w-auto" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Brand Protection Nash</h1>
+          <h1 className="text-3xl font-bold text-white">Brand Protection</h1>
           <p className="mt-2 text-blue-100">Sistema de Monitoramento de Anúncios</p>
         </div>
 
