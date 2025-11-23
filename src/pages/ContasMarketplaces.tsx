@@ -41,6 +41,7 @@ interface ContaComCliente extends ContaMarketplace {
 export default function ContasMarketplaces() {
   const [contas, setContas] = useState<ContaComCliente[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [marketplacesData, setMarketplacesData] = useState<Marketplace[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -73,9 +74,28 @@ export default function ContasMarketplaces() {
   });
 
   useEffect(() => {
-    fetchContas();
+    fetchMarketplaces();
     fetchClientes();
   }, []);
+
+  useEffect(() => {
+    if (marketplacesData.length > 0) {
+      fetchContas();
+    }
+  }, [marketplacesData]);
+
+  const fetchMarketplaces = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("marketplaces")
+        .select("id, nome, logo_url");
+
+      if (error) throw error;
+      setMarketplacesData(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar marketplaces:", error);
+    }
+  };
 
   const fetchContas = async () => {
     try {
@@ -93,18 +113,20 @@ export default function ContasMarketplaces() {
             name,
             empresa,
             email
-          ),
-          marketplace_info:marketplaces(id, nome, logo_url)
+          )
         `)
         .order("nome_conta");
 
       if (error) throw error;
 
-      const contasFormatadas = (data || []).map(conta => ({
-        ...conta,
-        cliente: conta.cliente_id ? (conta.cliente as unknown as Cliente) : null,
-        marketplace_info: conta.marketplace_info as unknown as Marketplace | null
-      })) as ContaComCliente[];
+      const contasFormatadas = (data || []).map(conta => {
+        const marketplaceInfo = marketplacesData.find(m => m.nome === conta.marketplace);
+        return {
+          ...conta,
+          cliente: conta.cliente_id ? (conta.cliente as unknown as Cliente) : null,
+          marketplace_info: marketplaceInfo || null
+        };
+      }) as ContaComCliente[];
 
       setContas(contasFormatadas);
     } catch (error) {
