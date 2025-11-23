@@ -20,71 +20,70 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get('SCREENSHOT_API_KEY');
+    const apiKey = Deno.env.get('SCRAPPEY_API_KEY');
     
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'API key não configurada. Configure SCREENSHOT_API_KEY nos secrets.' }),
+        JSON.stringify({ error: 'API key do Scrappey não configurada. Configure SCRAPPEY_API_KEY nos secrets.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Capturando screenshot de:', url);
+    console.log('Capturando screenshot com Scrappey de:', url);
 
-    // Usar screenshot.one - API com 100 screenshots grátis/mês
-    const screenshotApiUrl = new URL('https://api.screenshotone.com/take');
-    screenshotApiUrl.searchParams.set('access_key', apiKey);
-    screenshotApiUrl.searchParams.set('url', url);
-    screenshotApiUrl.searchParams.set('viewport_width', '1280');
-    screenshotApiUrl.searchParams.set('viewport_height', '720');
-    screenshotApiUrl.searchParams.set('device_scale_factor', '1');
-    screenshotApiUrl.searchParams.set('format', 'jpg');
-    screenshotApiUrl.searchParams.set('image_quality', '80');
-    screenshotApiUrl.searchParams.set('block_ads', 'true');
-    screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
-    screenshotApiUrl.searchParams.set('block_trackers', 'true');
-    screenshotApiUrl.searchParams.set('delay', '3');
-
-    console.log('Fazendo requisição para screenshot API');
-
-    const response = await fetch(screenshotApiUrl.toString(), {
-      method: 'GET',
+    // Scrappey API - https://wiki.scrappey.com/
+    const scrappeyResponse = await fetch('https://publisher.scrappey.com/api/v1', {
+      method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cmd: 'request.get',
+        url: url,
+        screenshot: true,
+        screenshotOptions: {
+          fullPage: false,
+          type: 'jpeg',
+          quality: 80
+        }
+      })
     });
+
+    console.log('Status da resposta Scrappey:', scrappeyResponse.status);
+
+    if (!scrappeyResponse.ok) {
+      const errorText = await scrappeyResponse.text();
+      console.error('Erro na resposta Scrappey:', errorText);
+      throw new Error(`Falha ao capturar screenshot com Scrappey: ${scrappeyResponse.status}`);
+    }
+
+    const scrappeyData = await scrappeyResponse.json();
+    console.log('Resposta Scrappey recebida');
+
+    // Scrappey retorna a sessão, agora precisamos buscar o screenshot
+    if (!scrappeyData.session) {
+      throw new Error('Sessão não retornada pela API');
+    }
+
+    // Buscar o screenshot da sessão
+    const screenshotResponse = await fetch(`https://publisher.scrappey.com/api/v1?key=${apiKey}&cmd=screenshot.get&session=${scrappeyData.session}`);
     
-    console.log('Status da resposta:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Erro na resposta:', errorText);
-      throw new Error(`Falha ao capturar screenshot: ${response.status} - ${errorText}`);
+    if (!screenshotResponse.ok) {
+      throw new Error(`Falha ao obter screenshot: ${screenshotResponse.status}`);
     }
 
-    // Verificar se é uma imagem
-    const contentType = response.headers.get('content-type');
-    console.log('Content-Type:', contentType);
-
-    if (!contentType?.includes('image')) {
-      throw new Error('Resposta não é uma imagem válida');
+    const screenshotData = await screenshotResponse.json();
+    
+    if (!screenshotData.solution?.screenshot) {
+      throw new Error('Screenshot não retornado pela API');
     }
 
-    // Converter para base64
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = btoa(
-      new Uint8Array(arrayBuffer).reduce(
-        (data, byte) => data + String.fromCharCode(byte),
-        ''
-      )
-    );
-
-    console.log('Screenshot capturado com sucesso, tamanho:', arrayBuffer.byteLength, 'bytes');
+    console.log('Screenshot capturado com sucesso');
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        screenshot: `data:image/jpeg;base64,${base64}`,
+        screenshot: screenshotData.solution.screenshot,
         message: 'Screenshot capturado com sucesso'
       }),
       { 
