@@ -191,6 +191,24 @@ export default function AdicionarAnuncio() {
 
       if (error) throw error;
 
+      // Acionar webhook após sucesso
+      if (codigoMLB) {
+        try {
+          await fetch("https://automacao.nashbrasil.com.br/webhook-test/addanuncios", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              mlb: codigoMLB,
+            }),
+          });
+        } catch (webhookError) {
+          console.error("Erro ao acionar webhook:", webhookError);
+          // Não falha a operação se o webhook falhar
+        }
+      }
+
       toast({
         title: "Anúncio adicionado com sucesso!",
         description: "O anúncio foi cadastrado no sistema.",
