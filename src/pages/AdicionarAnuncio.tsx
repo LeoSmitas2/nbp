@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Plus, Store } from "lucide-react";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 
@@ -27,6 +28,17 @@ interface Marketplace {
   id: string;
   nome: string;
   url_base: string;
+}
+
+interface ContaMarketplace {
+  id: string;
+  nome_conta: string;
+  marketplace: string;
+  cliente_id: string | null;
+  cliente?: {
+    name: string;
+    empresa: string | null;
+  };
 }
 
 interface DadosWebhook {
@@ -56,6 +68,11 @@ export default function AdicionarAnuncio() {
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
   const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [contaSelecionada, setContaSelecionada] = useState<string>("");
+  const [contasMarketplace, setContasMarketplace] = useState<ContaMarketplace[]>([]);
+  const [isAddContaDialogOpen, setIsAddContaDialogOpen] = useState(false);
+  const [novaConta, setNovaConta] = useState({ nome: "", cliente_id: "" });
+  const [clientes, setClientes] = useState<{ id: string; name: string; empresa: string | null }[]>([]);
   
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
@@ -73,7 +90,7 @@ export default function AdicionarAnuncio() {
     extrairCodigoMLB();
   }, [url]);
 
-  // Disparar webhook automaticamente quando tiver MLB
+  // Disparar webhook automaticamente quando tiver MLB e buscar contas
   useEffect(() => {
     const verificarEBuscarDados = async () => {
       if (codigoMLB && url) {
@@ -107,18 +124,130 @@ export default function AdicionarAnuncio() {
     verificarEBuscarDados();
   }, [codigoMLB]);
 
+  // Buscar contas quando marketplace for detectado
+  useEffect(() => {
+    if (marketplaceDetectado) {
+      buscarContasMarketplace();
+    }
+  }, [marketplaceDetectado]);
+
+  // Associar automaticamente vendedor à conta quando dados forem carregados
+  useEffect(() => {
+    if (dadosWebhook && dadosWebhook["Vendido Por"] && contasMarketplace.length > 0) {
+      associarVendedorAutomatico();
+    }
+  }, [dadosWebhook, contasMarketplace]);
+
   const fetchData = async () => {
     try {
-      const [produtosData, marketplacesData] = await Promise.all([
+      const [produtosData, marketplacesData, clientesData] = await Promise.all([
         supabase.from("produtos").select("id, nome, preco_minimo").eq("ativo", true).order("nome"),
         supabase.from("marketplaces").select("id, nome, url_base").eq("ativo", true).order("nome"),
+        supabase.from("profiles").select("id, name, empresa").order("name"),
       ]);
 
       setProdutos(produtosData.data || []);
       setMarketplaces(marketplacesData.data || []);
+      setClientes(clientesData.data || []);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const buscarContasMarketplace = async () => {
+    if (!marketplaceDetectado) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("contas_marketplace")
+        .select(`
+          id,
+          nome_conta,
+          marketplace,
+          cliente_id,
+          cliente:profiles(name, empresa)
+        `)
+        .eq("marketplace", marketplaceDetectado)
+        .order("nome_conta");
+
+      if (error) throw error;
+
+      const contasFormatadas = (data || []).map(conta => ({
+        ...conta,
+        cliente: conta.cliente_id && conta.cliente ? conta.cliente as any : undefined
+      }));
+
+      setContasMarketplace(contasFormatadas as ContaMarketplace[]);
+    } catch (error: any) {
+      console.error("Erro ao buscar contas:", error);
+    }
+  };
+
+  const associarVendedorAutomatico = () => {
+    if (!dadosWebhook || !dadosWebhook["Vendido Por"]) return;
+
+    const vendedor = dadosWebhook["Vendido Por"].toLowerCase().trim();
+    
+    // Tentar encontrar conta que match com o nome do vendedor
+    const contaEncontrada = contasMarketplace.find(conta => 
+      conta.nome_conta.toLowerCase().includes(vendedor) ||
+      vendedor.includes(conta.nome_conta.toLowerCase())
+    );
+
+    if (contaEncontrada) {
+      setContaSelecionada(contaEncontrada.id);
+      toast({
+        title: "Conta associada automaticamente",
+        description: `Vendedor "${dadosWebhook["Vendido Por"]}" associado à conta "${contaEncontrada.nome_conta}"`,
+      });
+    }
+  };
+
+  const handleAddConta = async () => {
+    if (!novaConta.nome.trim() || !marketplaceDetectado) {
+      toast({
+        title: "Erro",
+        description: "Preencha o nome da conta",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("contas_marketplace")
+        .insert({
+          nome_conta: novaConta.nome.trim(),
+          marketplace: marketplaceDetectado,
+          cliente_id: novaConta.cliente_id || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "A conta foi adicionada ao sistema",
+      });
+
+      setIsAddContaDialogOpen(false);
+      setNovaConta({ nome: "", cliente_id: "" });
+      
+      // Atualizar lista de contas
+      await buscarContasMarketplace();
+      
+      // Selecionar a conta recém-criada
+      if (data) {
+        setContaSelecionada(data.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar conta",
         description: error.message,
         variant: "destructive",
       });
@@ -476,6 +605,69 @@ export default function AdicionarAnuncio() {
                 )}
               </div>
 
+              {/* Seleção de Conta de Marketplace */}
+              {marketplaceDetectado && dadosWebhook && (
+                <div className="space-y-2 p-4 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="conta_marketplace" className="flex items-center gap-2">
+                      <Store className="h-4 w-4" />
+                      Conta do Marketplace
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddContaDialogOpen(true)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Nova Conta
+                    </Button>
+                  </div>
+                  
+                  {contasMarketplace.length > 0 ? (
+                    <>
+                      <Select value={contaSelecionada} onValueChange={setContaSelecionada}>
+                        <SelectTrigger id="conta_marketplace">
+                          <SelectValue placeholder="Selecione a conta do vendedor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contasMarketplace.map((conta) => (
+                            <SelectItem key={conta.id} value={conta.id}>
+                              <div className="flex flex-col">
+                                <span>{conta.nome_conta}</span>
+                                {conta.cliente && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {conta.cliente.name} {conta.cliente.empresa && `- ${conta.cliente.empresa}`}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {contaSelecionada 
+                          ? "Conta associada ao vendedor do anúncio"
+                          : "Associe este anúncio a uma conta de marketplace cadastrada"
+                        }
+                      </p>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground p-3 bg-background rounded border">
+                      Nenhuma conta cadastrada para {marketplaceDetectado}. 
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 ml-1"
+                        onClick={() => setIsAddContaDialogOpen(true)}
+                      >
+                        Criar primeira conta
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Indicador de progresso da webhook */}
               {webhookLoading && (
                 <div className="flex items-center justify-center gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
@@ -530,9 +722,9 @@ export default function AdicionarAnuncio() {
                           <span className="text-muted-foreground">Avaliações:</span>
                           <span className="ml-2">{dadosWebhook.Avaliações}</span>
                         </div>
-                        <div>
+                         <div>
                           <span className="text-muted-foreground">Vendedor:</span>
-                          <span className="ml-2">{dadosWebhook["Vendido Por"]}</span>
+                          <span className="ml-2 font-medium">{dadosWebhook["Vendido Por"]}</span>
                         </div>
                         {dadosWebhook.ML && (
                           <div className="col-span-2">
@@ -593,6 +785,79 @@ export default function AdicionarAnuncio() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Dialog para adicionar nova conta */}
+        <Dialog open={isAddContaDialogOpen} onOpenChange={setIsAddContaDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adicionar Nova Conta de Marketplace</DialogTitle>
+              <DialogDescription>
+                Cadastre uma nova conta para {marketplaceDetectado}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="nova-conta-nome">Nome da Conta *</Label>
+                <Input
+                  id="nova-conta-nome"
+                  placeholder="Ex: Loja Oficial, Minha Empresa"
+                  value={novaConta.nome}
+                  onChange={(e) => setNovaConta({ ...novaConta, nome: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use o mesmo nome que aparece como vendedor no anúncio
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nova-conta-cliente">Cliente (opcional)</Label>
+                <Select
+                  value={novaConta.cliente_id}
+                  onValueChange={(value) => setNovaConta({ ...novaConta, cliente_id: value })}
+                >
+                  <SelectTrigger id="nova-conta-cliente">
+                    <SelectValue placeholder="Selecione o cliente (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.name} {cliente.empresa && `- ${cliente.empresa}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Você pode associar o cliente depois
+                </p>
+              </div>
+
+              {marketplaceDetectado && (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Marketplace: <strong>{marketplaceDetectado}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAddContaDialogOpen(false);
+                  setNovaConta({ nome: "", cliente_id: "" });
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleAddConta}>
+                Criar Conta
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
