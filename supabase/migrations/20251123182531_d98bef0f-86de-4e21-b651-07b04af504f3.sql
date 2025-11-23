@@ -1,0 +1,34 @@
+-- Add contact fields to profiles table
+ALTER TABLE public.profiles 
+ADD COLUMN telefone_contato TEXT,
+ADD COLUMN nome_contato TEXT;
+
+-- Update handle_new_user function to include new fields
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $function$
+BEGIN
+  -- Insert into profiles with all fields
+  INSERT INTO public.profiles (id, email, name, empresa, cnpj, username, lojas_marketplaces, telefone_contato, nome_contato)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', 'Usuário'),
+    NEW.raw_user_meta_data->>'empresa',
+    NEW.raw_user_meta_data->>'cnpj',
+    NEW.raw_user_meta_data->>'username',
+    COALESCE((NEW.raw_user_meta_data->>'lojas_marketplaces')::jsonb, '[]'::jsonb),
+    NEW.raw_user_meta_data->>'telefone_contato',
+    NEW.raw_user_meta_data->>'nome_contato'
+  );
+  
+  -- Insert into user_roles with default CLIENT role and Pendente status
+  INSERT INTO public.user_roles (user_id, role, status)
+  VALUES (NEW.id, 'CLIENT', 'Pendente');
+  
+  RETURN NEW;
+END;
+$function$;
