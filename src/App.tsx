@@ -11,6 +11,8 @@ import Cadastro from "./pages/Cadastro";
 import PendingApproval from "./pages/PendingApproval";
 import DashboardCliente from "./pages/DashboardCliente";
 import DashboardAdmin from "./pages/DashboardAdmin";
+import NovaDenuncia from "./pages/NovaDenuncia";
+import MinhasDenuncias from "./pages/MinhasDenuncias";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,28 @@ const App = () => (
                 <ProtectedRoute requireAdmin>
                   <Layout>
                     <DashboardAdmin />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/nova-denuncia"
+              element={
+                <ProtectedRoute requireApproval>
+                  <Layout>
+                    <NovaDenuncia />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/minhas-denuncias"
+              element={
+                <ProtectedRoute requireApproval>
+                  <Layout>
+                    <MinhasDenuncias />
                   </Layout>
                 </ProtectedRoute>
               }
