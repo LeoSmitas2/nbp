@@ -78,18 +78,20 @@ export default function AdicionarAnuncio() {
     const verificarEBuscarDados = async () => {
       if (codigoMLB && url) {
         // Verificar se já existe anúncio com este código
-        const { data: anuncioExiste } = await supabase
+        const { data: anunciosExistentes, error } = await supabase
           .from("anuncios_monitorados")
           .select("id, url, produtos(nome)")
-          .eq("codigo_marketplace", codigoMLB)
-          .maybeSingle();
+          .eq("codigo_marketplace", codigoMLB);
 
-        if (anuncioExiste) {
+        console.log("Verificação de duplicata:", { codigoMLB, anunciosExistentes, error });
+
+        if (!error && anunciosExistentes && anunciosExistentes.length > 0) {
           setAnuncioExistente(true);
           setDadosWebhook(null);
+          setWebhookLoading(false);
           toast({
             title: "Anúncio já cadastrado",
-            description: `Este anúncio já foi cadastrado anteriormente.`,
+            description: `Este anúncio já foi cadastrado ${anunciosExistentes.length} vez(es) anteriormente.`,
             variant: "destructive",
           });
         } else {
