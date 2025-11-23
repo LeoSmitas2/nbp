@@ -199,6 +199,8 @@ export type Database = {
           id: string
           lojas_marketplaces: Json | null
           name: string
+          nome_contato: string | null
+          telefone_contato: string | null
           updated_at: string
           username: string | null
         }
@@ -210,6 +212,8 @@ export type Database = {
           id: string
           lojas_marketplaces?: Json | null
           name: string
+          nome_contato?: string | null
+          telefone_contato?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -221,6 +225,8 @@ export type Database = {
           id?: string
           lojas_marketplaces?: Json | null
           name?: string
+          nome_contato?: string | null
+          telefone_contato?: string | null
           updated_at?: string
           username?: string | null
         }

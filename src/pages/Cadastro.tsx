@@ -16,6 +16,8 @@ export default function Cadastro() {
   const [username, setUsername] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [cnpj, setCnpj] = useState("");
+  const [telefoneContato, setTelefoneContato] = useState("");
+  const [nomeContato, setNomeContato] = useState("");
   const [lojas, setLojas] = useState<Array<{ nome: string; marketplace: string }>>([
     { nome: "", marketplace: "" }
   ]);
@@ -60,7 +62,7 @@ export default function Cadastro() {
       return;
     }
 
-    if (!empresa || !cnpj || !username) {
+    if (!empresa || !cnpj || !username || !telefoneContato || !nomeContato) {
       setError("Por favor, preencha todos os campos obrigatórios");
       setLoading(false);
       return;
@@ -75,7 +77,7 @@ export default function Cadastro() {
     }
 
     try {
-      const { error } = await signUp(email, password, username, empresa, cnpj, lojasValidas);
+      const { error } = await signUp(email, password, username, empresa, cnpj, telefoneContato, nomeContato, lojasValidas);
 
       if (error) {
         if (error.message.includes("already registered")) {
@@ -147,6 +149,30 @@ export default function Cadastro() {
                     placeholder="00.000.000/0000-00"
                     value={cnpj}
                     onChange={(e) => setCnpj(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nome-contato">Nome da Pessoa de Contato</Label>
+                  <Input
+                    id="nome-contato"
+                    type="text"
+                    placeholder="João Silva"
+                    value={nomeContato}
+                    onChange={(e) => setNomeContato(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telefone">Telefone de Contato (WhatsApp)</Label>
+                  <Input
+                    id="telefone"
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={telefoneContato}
+                    onChange={(e) => setTelefoneContato(e.target.value)}
                     required
                   />
                 </div>
