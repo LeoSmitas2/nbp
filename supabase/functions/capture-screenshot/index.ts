@@ -45,7 +45,16 @@ serve(async (req) => {
         screenshot: true,
         screenshotWidth: 1280,
         screenshotHeight: 720,
-        fullPage: false
+        fullPage: false,
+        // Opções anti-bloqueio
+        sessionTTL: 60,
+        proxyCountry: 'BR',
+        browserActions: [
+          {
+            type: 'wait',
+            milliseconds: 2000
+          }
+        ]
       })
     });
 
