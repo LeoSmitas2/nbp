@@ -11,8 +11,11 @@ import { Shield } from "lucide-react";
 export default function Cadastro() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [empresa, setEmpresa] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [nomeLojas, setNomeLojas] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,8 +33,20 @@ export default function Cadastro() {
       return;
     }
 
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem");
+      setLoading(false);
+      return;
+    }
+
+    if (!empresa || !cnpj || !username || !nomeLojas) {
+      setError("Por favor, preencha todos os campos obrigatórios");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error } = await signUp(email, password, name, empresa);
+      const { error } = await signUp(email, password, username, empresa, cnpj, nomeLojas);
 
       if (error) {
         if (error.message.includes("already registered")) {
@@ -84,13 +99,37 @@ export default function Cadastro() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
+                  <Label htmlFor="empresa">Nome da Empresa</Label>
                   <Input
-                    id="name"
+                    id="empresa"
                     type="text"
-                    placeholder="João Silva"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nome da sua empresa"
+                    value={empresa}
+                    onChange={(e) => setEmpresa(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Input
+                    id="cnpj"
+                    type="text"
+                    placeholder="00.000.000/0000-00"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username">Nome de Usuário</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="seu_usuario"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
@@ -108,17 +147,6 @@ export default function Cadastro() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="empresa">Empresa (opcional)</Label>
-                  <Input
-                    id="empresa"
-                    type="text"
-                    placeholder="Nome da empresa"
-                    value={empresa}
-                    onChange={(e) => setEmpresa(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
                   <Input
                     id="password"
@@ -129,6 +157,30 @@ export default function Cadastro() {
                     required
                   />
                   <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nomeLojas">Nome das Lojas no Marketplace</Label>
+                  <Input
+                    id="nomeLojas"
+                    type="text"
+                    placeholder="Nome das suas lojas"
+                    value={nomeLojas}
+                    onChange={(e) => setNomeLojas(e.target.value)}
+                    required
+                  />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
