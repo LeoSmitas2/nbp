@@ -624,12 +624,12 @@ export default function GerenciarAnuncios() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-cliente">Cliente</Label>
-                <Select value={clienteId} onValueChange={setClienteId}>
+                <Select value={clienteId || "none"} onValueChange={(value) => setClienteId(value === "none" ? "" : value)}>
                   <SelectTrigger id="edit-cliente">
                     <SelectValue placeholder="Selecione o cliente (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {clientes.map((cliente) => (
                       <SelectItem key={cliente.id} value={cliente.id}>
                         {cliente.name}
