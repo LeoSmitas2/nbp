@@ -28,11 +28,37 @@ interface Denuncia {
   marketplaces: { nome: string };
 }
 
+interface Cliente {
+  id: string;
+  name: string;
+  empresa: string | null;
+}
+
+interface Produto {
+  id: string;
+  nome: string;
+}
+
+interface Marketplace {
+  id: string;
+  nome: string;
+}
+
 export default function GerenciarDenuncias() {
   const [denuncias, setDenuncias] = useState<Denuncia[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingDenuncia, setEditingDenuncia] = useState<Denuncia | null>(null);
+  
+  // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [clienteFilter, setClienteFilter] = useState<string>("all");
+  const [produtoFilter, setProdutoFilter] = useState<string>("all");
+  const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
+  
+  // Filter options
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
   
   // Form states for editing
   const [editStatus, setEditStatus] = useState<string>("");
@@ -40,8 +66,47 @@ export default function GerenciarDenuncias() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    fetchFilterOptions();
+  }, []);
+
+  useEffect(() => {
     fetchDenuncias();
-  }, [statusFilter]);
+  }, [statusFilter, clienteFilter, produtoFilter, marketplaceFilter]);
+
+  const fetchFilterOptions = async () => {
+    try {
+      // Fetch clientes
+      const { data: clientesData, error: clientesError } = await supabase
+        .from("profiles")
+        .select("id, name, empresa")
+        .order("name");
+
+      if (clientesError) throw clientesError;
+      setClientes(clientesData || []);
+
+      // Fetch produtos
+      const { data: produtosData, error: produtosError } = await supabase
+        .from("produtos")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (produtosError) throw produtosError;
+      setProdutos(produtosData || []);
+
+      // Fetch marketplaces
+      const { data: marketplacesData, error: marketplacesError } = await supabase
+        .from("marketplaces")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (marketplacesError) throw marketplacesError;
+      setMarketplaces(marketplacesData || []);
+    } catch (error) {
+      console.error("Erro ao buscar opções de filtro:", error);
+    }
+  };
 
   const fetchDenuncias = async () => {
     try {
@@ -57,6 +122,18 @@ export default function GerenciarDenuncias() {
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter as "Solicitada" | "Em andamento" | "Resolvida");
+      }
+
+      if (clienteFilter !== "all") {
+        query = query.eq("cliente_id", clienteFilter);
+      }
+
+      if (produtoFilter !== "all") {
+        query = query.eq("produto_id", produtoFilter);
+      }
+
+      if (marketplaceFilter !== "all") {
+        query = query.eq("marketplace_id", marketplaceFilter);
       }
 
       const { data, error } = await query;
@@ -164,18 +241,70 @@ export default function GerenciarDenuncias() {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="status-filter">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger id="status-filter">
-                  <SelectValue placeholder="Filtrar por status" />
+                  <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="Solicitada">Solicitada</SelectItem>
                   <SelectItem value="Em andamento">Em andamento</SelectItem>
                   <SelectItem value="Resolvida">Resolvida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cliente-filter">Cliente</Label>
+              <Select value={clienteFilter} onValueChange={setClienteFilter}>
+                <SelectTrigger id="cliente-filter">
+                  <SelectValue placeholder="Todos os clientes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {clientes.map((cliente) => (
+                    <SelectItem key={cliente.id} value={cliente.id}>
+                      {cliente.name}
+                      {cliente.empresa && ` (${cliente.empresa})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="produto-filter">Produto</Label>
+              <Select value={produtoFilter} onValueChange={setProdutoFilter}>
+                <SelectTrigger id="produto-filter">
+                  <SelectValue placeholder="Todos os produtos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {produtos.map((produto) => (
+                    <SelectItem key={produto.id} value={produto.id}>
+                      {produto.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="marketplace-filter">Marketplace</Label>
+              <Select value={marketplaceFilter} onValueChange={setMarketplaceFilter}>
+                <SelectTrigger id="marketplace-filter">
+                  <SelectValue placeholder="Todos os marketplaces" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {marketplaces.map((marketplace) => (
+                    <SelectItem key={marketplace.id} value={marketplace.id}>
+                      {marketplace.nome}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
