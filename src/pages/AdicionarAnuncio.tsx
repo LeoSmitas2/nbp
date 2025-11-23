@@ -13,7 +13,7 @@ import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 
 const anuncioSchema = z.object({
-  url: z.string().url("URL inválida").max(500, "URL muito longa"),
+  url: z.string().url("URL inválida"),
   produto_id: z.string().min(1, "Selecione um produto"),
 });
 
