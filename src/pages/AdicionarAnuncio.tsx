@@ -219,8 +219,15 @@ export default function AdicionarAnuncio() {
     setDadosWebhook(null);
 
     try {
+      // Construir URL com todos os parâmetros necessários
+      const params = new URLSearchParams({
+        codigo: codigoMLB,
+        url: url,
+        marketplace: marketplaceDetectado || 'Desconhecido'
+      });
+
       const webhookResponse = await fetch(
-        `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
+        `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?${params.toString()}`,
         { method: "GET" }
       );
 
@@ -237,7 +244,7 @@ export default function AdicionarAnuncio() {
           
           // Tentar buscar novamente
           const retryResponse = await fetch(
-            `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
+            `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?${params.toString()}`,
             { method: "GET" }
           );
           
