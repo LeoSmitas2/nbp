@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Store, ExternalLink, AlertCircle } from "lucide-react";
+import { Plus, Edit, Store, ExternalLink, AlertCircle, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 interface Marketplace {
@@ -26,6 +27,9 @@ export default function GerenciarMarketplaces() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMarketplace, setEditingMarketplace] = useState<Marketplace | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [marketplaceToDelete, setMarketplaceToDelete] = useState<Marketplace | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form states
   const [nome, setNome] = useState("");
@@ -202,6 +206,46 @@ export default function GerenciarMarketplaces() {
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error("Erro ao atualizar status do marketplace");
+    }
+  };
+
+  const handleOpenDeleteDialog = (marketplace: Marketplace) => {
+    setMarketplaceToDelete(marketplace);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!marketplaceToDelete) return;
+
+    setDeleting(true);
+    try {
+      // Deletar logo do storage se existir
+      if (marketplaceToDelete.logo_url) {
+        const oldPath = marketplaceToDelete.logo_url.split("/").pop();
+        if (oldPath) {
+          await supabase.storage
+            .from("marketplace-logos")
+            .remove([oldPath]);
+        }
+      }
+
+      // Deletar marketplace
+      const { error } = await supabase
+        .from("marketplaces")
+        .delete()
+        .eq("id", marketplaceToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Marketplace excluído com sucesso!");
+      setDeleteDialogOpen(false);
+      setMarketplaceToDelete(null);
+      fetchMarketplaces();
+    } catch (error: any) {
+      console.error("Erro ao excluir marketplace:", error);
+      toast.error("Erro ao excluir marketplace");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -393,6 +437,15 @@ export default function GerenciarMarketplaces() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDeleteDialog(marketplace)}
+                            title="Excluir"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                           <div className="flex items-center gap-2 border-l pl-2">
                             <Switch
                               checked={marketplace.ativo}
@@ -414,6 +467,28 @@ export default function GerenciarMarketplaces() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o marketplace <strong>{marketplaceToDelete?.nome}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
