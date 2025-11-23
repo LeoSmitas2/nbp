@@ -162,23 +162,46 @@ export default function AdicionarAnuncio() {
     }
 
     try {
-      // Procurar padrão MLB-XXXXXXXX na URL
-      // O código pode estar em diferentes formatos:
-      // - /MLB-1234567890-nome-produto
-      // - /p/MLB1234567890
-      // - ?item_id=MLB1234567890
-      const regexPatterns = [
-        /MLB-?(\d{10,})/i,  // MLB-1234567890 ou MLB1234567890
-        /\/p\/MLB-?(\d{10,})/i, // /p/MLB1234567890
-        /item_id=MLB-?(\d{10,})/i, // ?item_id=MLB1234567890
-      ];
+      // Verificar se é Amazon
+      const isAmazon = url.toLowerCase().includes('amazon');
+      
+      if (isAmazon) {
+        // Procurar padrão ASIN da Amazon (ex: B0CNKV9KJG)
+        // ASIN geralmente aparece em: /dp/ASIN, /product/ASIN, /gp/product/ASIN
+        const asinPatterns = [
+          /\/dp\/([A-Z0-9]{10})/i,  // /dp/B0CNKV9KJG
+          /\/product\/([A-Z0-9]{10})/i, // /product/B0CNKV9KJG
+          /\/gp\/product\/([A-Z0-9]{10})/i, // /gp/product/B0CNKV9KJG
+          /[?&]ASIN=([A-Z0-9]{10})/i, // ?ASIN=B0CNKV9KJG
+          /\/(B[A-Z0-9]{9})/i, // Qualquer /B0CNKV9KJG
+        ];
 
-      for (const pattern of regexPatterns) {
-        const match = url.match(pattern);
-        if (match) {
-          const codigo = `MLB-${match[1]}`;
-          setCodigoMLB(codigo);
-          return;
+        for (const pattern of asinPatterns) {
+          const match = url.match(pattern);
+          if (match && match[1].startsWith('B')) {
+            setCodigoMLB(match[1].toUpperCase());
+            return;
+          }
+        }
+      } else {
+        // Procurar padrão MLB-XXXXXXXX na URL (Mercado Livre)
+        // O código pode estar em diferentes formatos:
+        // - /MLB-1234567890-nome-produto
+        // - /p/MLB1234567890
+        // - ?item_id=MLB1234567890
+        const regexPatterns = [
+          /MLB-?(\d{10,})/i,  // MLB-1234567890 ou MLB1234567890
+          /\/p\/MLB-?(\d{10,})/i, // /p/MLB1234567890
+          /item_id=MLB-?(\d{10,})/i, // ?item_id=MLB1234567890
+        ];
+
+        for (const pattern of regexPatterns) {
+          const match = url.match(pattern);
+          if (match) {
+            const codigo = `MLB-${match[1]}`;
+            setCodigoMLB(codigo);
+            return;
+          }
         }
       }
 
