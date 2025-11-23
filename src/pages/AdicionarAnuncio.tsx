@@ -40,6 +40,7 @@ export default function AdicionarAnuncio() {
   const [produtoId, setProdutoId] = useState("");
   const [precoDetectado, setPrecoDetectado] = useState("");
   const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
+  const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -55,6 +56,7 @@ export default function AdicionarAnuncio() {
 
   useEffect(() => {
     detectarMarketplace();
+    extrairCodigoMLB();
   }, [url]);
 
   const fetchData = async () => {
@@ -102,6 +104,39 @@ export default function AdicionarAnuncio() {
       setMarketplaceDetectado(marketplaceEncontrado?.nome || null);
     } catch {
       setMarketplaceDetectado(null);
+    }
+  };
+
+  const extrairCodigoMLB = () => {
+    if (!url) {
+      setCodigoMLB(null);
+      return;
+    }
+
+    try {
+      // Procurar padrão MLB-XXXXXXXX na URL
+      // O código pode estar em diferentes formatos:
+      // - /MLB-1234567890-nome-produto
+      // - /p/MLB1234567890
+      // - ?item_id=MLB1234567890
+      const regexPatterns = [
+        /MLB-?(\d{10,})/i,  // MLB-1234567890 ou MLB1234567890
+        /\/p\/MLB-?(\d{10,})/i, // /p/MLB1234567890
+        /item_id=MLB-?(\d{10,})/i, // ?item_id=MLB1234567890
+      ];
+
+      for (const pattern of regexPatterns) {
+        const match = url.match(pattern);
+        if (match) {
+          const codigo = `MLB-${match[1]}`;
+          setCodigoMLB(codigo);
+          return;
+        }
+      }
+
+      setCodigoMLB(null);
+    } catch {
+      setCodigoMLB(null);
     }
   };
 
@@ -156,6 +191,7 @@ export default function AdicionarAnuncio() {
         origem: "Manual",
         status,
         cliente_id: null,
+        codigo_marketplace: codigoMLB,
       });
 
       if (error) throw error;
@@ -226,6 +262,13 @@ export default function AdicionarAnuncio() {
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <span>Marketplace detectado:</span>
                     <Badge variant="secondary">{marketplaceDetectado}</Badge>
+                    {codigoMLB && (
+                      <>
+                        <span>•</span>
+                        <span>Código:</span>
+                        <Badge variant="outline">{codigoMLB}</Badge>
+                      </>
+                    )}
                   </div>
                 )}
                 {url && !marketplaceDetectado && (
