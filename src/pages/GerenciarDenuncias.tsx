@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ExternalLink, Edit, CheckCircle2, AlertCircle } from "lucide-react";
+import { ExternalLink, Edit, CheckCircle2, AlertCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Denuncia {
@@ -65,6 +65,11 @@ export default function GerenciarDenuncias() {
   const [editStatus, setEditStatus] = useState<string>("");
   const [editComentario, setEditComentario] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  
+  // States for associating complaint to client
+  const [associatingDenuncia, setAssociatingDenuncia] = useState<Denuncia | null>(null);
+  const [selectedClienteId, setSelectedClienteId] = useState<string>("");
+  const [associating, setAssociating] = useState(false);
 
   useEffect(() => {
     fetchFilterOptions();
@@ -204,6 +209,53 @@ export default function GerenciarDenuncias() {
     } catch (error) {
       console.error("Erro ao converter denúncia:", error);
       toast.error("Erro ao converter denúncia");
+    }
+  };
+
+  const handleAssociateClient = (denuncia: Denuncia) => {
+    setAssociatingDenuncia(denuncia);
+    setSelectedClienteId("");
+  };
+
+  const handleSaveAssociation = async () => {
+    if (!associatingDenuncia || !selectedClienteId) {
+      toast.error("Selecione um cliente");
+      return;
+    }
+
+    setAssociating(true);
+    try {
+      // Update denúncia with new client
+      const { error: updateError } = await supabase
+        .from("denuncias")
+        .update({ cliente_id: selectedClienteId })
+        .eq("id", associatingDenuncia.id);
+
+      if (updateError) throw updateError;
+
+      // Create notification for the new client
+      const cliente = clientes.find(c => c.id === selectedClienteId);
+      const { error: notificationError } = await supabase
+        .from("notificacoes")
+        .insert({
+          usuario_id: selectedClienteId,
+          titulo: "Nova denúncia associada",
+          mensagem: `Uma denúncia (${associatingDenuncia.codigo_denuncia}) foi associada à sua conta. Produto: ${associatingDenuncia.produtos.nome}, Marketplace: ${associatingDenuncia.marketplaces.nome}, Preço: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(associatingDenuncia.preco_informado)}`,
+          tipo: "denuncia",
+          denuncia_id: associatingDenuncia.id,
+        });
+
+      if (notificationError) throw notificationError;
+
+      toast.success(`Denúncia associada ao cliente ${cliente?.name}`);
+      setAssociatingDenuncia(null);
+      setSelectedClienteId("");
+      fetchDenuncias();
+    } catch (error) {
+      console.error("Erro ao associar denúncia:", error);
+      toast.error("Erro ao associar denúncia ao cliente");
+    } finally {
+      setAssociating(false);
     }
   };
 
@@ -396,6 +448,83 @@ export default function GerenciarDenuncias() {
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
+                          
+                          <Dialog open={associatingDenuncia?.id === denuncia.id} onOpenChange={(open) => !open && setAssociatingDenuncia(null)}>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleAssociateClient(denuncia)}
+                                title="Associar a outro cliente"
+                              >
+                                <UserPlus className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Associar Denúncia a Cliente</DialogTitle>
+                                <DialogDescription>
+                                  Escolha um cliente para associar esta denúncia
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                              <div className="space-y-4 py-4">
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="font-medium">Código:</span>{" "}
+                                    {denuncia.codigo_denuncia}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Produto:</span>{" "}
+                                    {denuncia.produtos.nome}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Marketplace:</span>{" "}
+                                    {denuncia.marketplaces.nome}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Preço:</span>{" "}
+                                    {new Intl.NumberFormat("pt-BR", {
+                                      style: "currency",
+                                      currency: "BRL",
+                                    }).format(denuncia.preco_informado)}
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="cliente-select">Selecione o Cliente</Label>
+                                  <Select value={selectedClienteId} onValueChange={setSelectedClienteId}>
+                                    <SelectTrigger id="cliente-select">
+                                      <SelectValue placeholder="Escolha um cliente" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {clientes.map((cliente) => (
+                                        <SelectItem key={cliente.id} value={cliente.id}>
+                                          {cliente.name} {cliente.empresa && `- ${cliente.empresa}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              
+                              <DialogFooter>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setAssociatingDenuncia(null)}
+                                  disabled={associating}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  onClick={handleSaveAssociation}
+                                  disabled={associating || !selectedClienteId}
+                                >
+                                  {associating ? "Associando..." : "Associar"}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
                           
                           <Dialog>
                             <DialogTrigger asChild>
