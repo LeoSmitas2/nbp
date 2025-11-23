@@ -27,8 +27,15 @@ interface Cliente {
   email: string;
 }
 
+interface Marketplace {
+  id: string;
+  nome: string;
+  logo_url: string | null;
+}
+
 interface ContaComCliente extends ContaMarketplace {
   cliente: Cliente | null;
+  marketplace_info: Marketplace | null;
 }
 
 export default function ContasMarketplaces() {
@@ -86,7 +93,8 @@ export default function ContasMarketplaces() {
             name,
             empresa,
             email
-          )
+          ),
+          marketplace_info:marketplaces(id, nome, logo_url)
         `)
         .order("nome_conta");
 
@@ -94,10 +102,11 @@ export default function ContasMarketplaces() {
 
       const contasFormatadas = (data || []).map(conta => ({
         ...conta,
-        cliente: conta.cliente_id ? (conta.cliente as unknown as Cliente) : null
-      })) as (ContaMarketplace & { cliente: Cliente | null })[];
+        cliente: conta.cliente_id ? (conta.cliente as unknown as Cliente) : null,
+        marketplace_info: conta.marketplace_info as unknown as Marketplace | null
+      })) as ContaComCliente[];
 
-      setContas(contasFormatadas as any);
+      setContas(contasFormatadas);
     } catch (error) {
       console.error("Erro ao buscar contas:", error);
       toast.error("Erro ao carregar contas");
@@ -354,8 +363,16 @@ export default function ContasMarketplaces() {
                     <TableCell className="font-medium">{conta.nome_conta}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Store className="h-4 w-4 text-muted-foreground" />
-                        {conta.marketplace}
+                        {conta.marketplace_info?.logo_url ? (
+                          <img 
+                            src={conta.marketplace_info.logo_url} 
+                            alt={conta.marketplace_info.nome}
+                            className="h-6 w-6 object-contain"
+                          />
+                        ) : (
+                          <Store className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>{conta.marketplace_info?.nome || conta.marketplace}</span>
                       </div>
                     </TableCell>
                     <TableCell>
