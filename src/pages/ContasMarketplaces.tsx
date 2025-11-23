@@ -24,8 +24,18 @@ interface Cliente {
   lojas_marketplaces: Loja[];
 }
 
+interface ContaExpandida {
+  nomeConta: string;
+  marketplace: string;
+  clienteId: string;
+  clienteNome: string;
+  clienteEmpresa: string;
+  clienteEmail: string;
+}
+
 export default function ContasMarketplaces() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [contasExpandidas, setContasExpandidas] = useState<ContaExpandida[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
@@ -55,6 +65,24 @@ export default function ContasMarketplaces() {
       }));
 
       setClientes(clientesFormatados);
+
+      // Expandir as contas para uma linha por loja
+      const contas: ContaExpandida[] = [];
+      clientesFormatados.forEach(cliente => {
+        if (Array.isArray(cliente.lojas_marketplaces) && cliente.lojas_marketplaces.length > 0) {
+          cliente.lojas_marketplaces.forEach(loja => {
+            contas.push({
+              nomeConta: loja.nome,
+              marketplace: loja.marketplace,
+              clienteId: cliente.id,
+              clienteNome: cliente.name,
+              clienteEmpresa: cliente.empresa || "-",
+              clienteEmail: cliente.email
+            });
+          });
+        }
+      });
+      setContasExpandidas(contas);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
       toast.error("Erro ao carregar clientes");
@@ -134,51 +162,49 @@ export default function ContasMarketplaces() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {clientes.length === 0 ? (
+          {contasExpandidas.length === 0 ? (
             <Alert>
-              <AlertDescription>Nenhum cliente cadastrado ainda.</AlertDescription>
+              <AlertDescription>Nenhuma conta cadastrada ainda.</AlertDescription>
             </Alert>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Nome da Conta</TableHead>
+                  <TableHead>Marketplace</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Lojas Cadastradas</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientes.map((cliente) => (
-                  <TableRow key={cliente.id}>
-                    <TableCell className="font-medium">{cliente.name}</TableCell>
+                {contasExpandidas.map((conta, index) => (
+                  <TableRow key={`${conta.clienteId}-${index}`}>
+                    <TableCell className="font-medium">{conta.nomeConta}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Store className="h-4 w-4 text-muted-foreground" />
+                        {conta.marketplace}
+                      </div>
+                    </TableCell>
+                    <TableCell>{conta.clienteNome}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {cliente.empresa || "-"}
+                        {conta.clienteEmpresa}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{cliente.email}</TableCell>
-                    <TableCell>
-                      {Array.isArray(cliente.lojas_marketplaces) && cliente.lojas_marketplaces.length > 0 ? (
-                        <div className="space-y-1">
-                          {cliente.lojas_marketplaces.map((loja, idx) => (
-                            <div key={idx} className="text-sm">
-                              <span className="font-medium">{loja.nome}</span>
-                              <span className="text-muted-foreground"> ({loja.marketplace})</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Nenhuma loja cadastrada</span>
-                      )}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{conta.clienteEmail}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEdit(cliente)}
+                        onClick={() => {
+                          const cliente = clientes.find(c => c.id === conta.clienteId);
+                          if (cliente) handleEdit(cliente);
+                        }}
+                        title="Editar contas do cliente"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
