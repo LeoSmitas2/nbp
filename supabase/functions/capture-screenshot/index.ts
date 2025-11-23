@@ -22,13 +22,23 @@ serve(async (req) => {
 
     console.log('Capturando screenshot de:', url);
 
-    // Usar screenshot.rocks - API gratuita e confiável
-    const screenshotApiUrl = `https://api.pikwy.com/web/?token=demo&url=${encodeURIComponent(url)}&width=1280&height=720&refresh=true`;
+    // Usar screenshot.one - API gratuita confiável
+    const screenshotApiUrl = new URL('https://api.screenshotone.com/take');
+    screenshotApiUrl.searchParams.set('access_key', 'RJu0vfkD4sfKkA'); // chave demo pública
+    screenshotApiUrl.searchParams.set('url', url);
+    screenshotApiUrl.searchParams.set('viewport_width', '1280');
+    screenshotApiUrl.searchParams.set('viewport_height', '720');
+    screenshotApiUrl.searchParams.set('device_scale_factor', '1');
+    screenshotApiUrl.searchParams.set('format', 'jpg');
+    screenshotApiUrl.searchParams.set('image_quality', '80');
+    screenshotApiUrl.searchParams.set('block_ads', 'true');
+    screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
+    screenshotApiUrl.searchParams.set('block_trackers', 'true');
+    screenshotApiUrl.searchParams.set('delay', '3');
 
-    console.log('Fazendo requisição para:', screenshotApiUrl);
+    console.log('Fazendo requisição para screenshot API');
 
-    // Fazer requisição para obter o screenshot
-    const response = await fetch(screenshotApiUrl, {
+    const response = await fetch(screenshotApiUrl.toString(), {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -38,8 +48,17 @@ serve(async (req) => {
     console.log('Status da resposta:', response.status);
 
     if (!response.ok) {
-      console.error('Erro na resposta:', await response.text());
-      throw new Error(`Falha ao capturar screenshot: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Erro na resposta:', errorText);
+      throw new Error(`Falha ao capturar screenshot: ${response.status} - ${errorText}`);
+    }
+
+    // Verificar se é uma imagem
+    const contentType = response.headers.get('content-type');
+    console.log('Content-Type:', contentType);
+
+    if (!contentType?.includes('image')) {
+      throw new Error('Resposta não é uma imagem válida');
     }
 
     // Converter para base64

@@ -1,1 +1,4 @@
 project_id = "dmvnoasxfkjklzojvqgm"
+
+[functions.capture-screenshot]
+verify_jwt = false
