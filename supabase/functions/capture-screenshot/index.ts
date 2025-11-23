@@ -46,7 +46,8 @@ serve(async (req) => {
         screenshotWidth: 1280,
         screenshotHeight: 720,
         fullPage: false,
-        // Opções anti-bloqueio - sem restrição de país para melhor performance
+        // Opções anti-bloqueio com proxy residencial
+        proxyType: 'residential',
         sessionTTL: 60,
         browserActions: [
           {
