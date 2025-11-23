@@ -22,15 +22,24 @@ serve(async (req) => {
 
     console.log('Capturando screenshot de:', url);
 
-    // Usar API de screenshot gratuita (screenshotmachine.com free tier)
-    // Alternativa: usar screenshot.rocks ou apiflash
-    const screenshotUrl = `https://api.screenshotmachine.com/?key=demo&url=${encodeURIComponent(url)}&dimension=1024x768&format=png&delay=2000`;
+    // Usar screenshot.rocks - API gratuita e confiável
+    const screenshotApiUrl = `https://api.pikwy.com/web/?token=demo&url=${encodeURIComponent(url)}&width=1280&height=720&refresh=true`;
+
+    console.log('Fazendo requisição para:', screenshotApiUrl);
 
     // Fazer requisição para obter o screenshot
-    const response = await fetch(screenshotUrl);
+    const response = await fetch(screenshotApiUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
     
+    console.log('Status da resposta:', response.status);
+
     if (!response.ok) {
-      throw new Error('Falha ao capturar screenshot');
+      console.error('Erro na resposta:', await response.text());
+      throw new Error(`Falha ao capturar screenshot: ${response.status}`);
     }
 
     // Converter para base64
@@ -42,10 +51,12 @@ serve(async (req) => {
       )
     );
 
+    console.log('Screenshot capturado com sucesso, tamanho:', arrayBuffer.byteLength, 'bytes');
+
     return new Response(
       JSON.stringify({ 
         success: true,
-        screenshot: `data:image/png;base64,${base64}`,
+        screenshot: `data:image/jpeg;base64,${base64}`,
         message: 'Screenshot capturado com sucesso'
       }),
       { 
