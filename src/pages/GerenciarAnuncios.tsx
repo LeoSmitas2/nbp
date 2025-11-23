@@ -27,6 +27,7 @@ interface Anuncio {
   marketplace_id: string;
   codigo_marketplace: string | null;
   conta_marketplace_id: string | null;
+  imagem: string | null;
   profiles: { name: string; empresa: string | null } | null;
   produtos: { nome: string };
   marketplaces: { nome: string; logo_url: string | null };
@@ -459,6 +460,7 @@ export default function GerenciarAnuncios() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Foto</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Código</TableHead>
                     <TableHead>Marketplace</TableHead>
@@ -476,6 +478,19 @@ export default function GerenciarAnuncios() {
                   {anuncios.map((anuncio) => {
                     return (
                       <TableRow key={anuncio.id}>
+                        <TableCell>
+                          {anuncio.imagem ? (
+                            <img 
+                              src={anuncio.imagem} 
+                              alt="Foto do anúncio" 
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-muted-foreground text-xs">
+                              Sem foto
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-medium">
                           {anuncio.produtos.nome}
                         </TableCell>
