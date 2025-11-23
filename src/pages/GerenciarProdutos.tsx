@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Package, AlertCircle } from "lucide-react";
+import { Plus, Edit, Package, AlertCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Produto {
@@ -26,6 +27,8 @@ export default function GerenciarProdutos() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduto, setEditingProduto] = useState<Produto | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [produtoToDelete, setProdutoToDelete] = useState<Produto | null>(null);
 
   // Form states
   const [nome, setNome] = useState("");
@@ -148,6 +151,36 @@ export default function GerenciarProdutos() {
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
       toast.error("Erro ao atualizar status do produto");
+    }
+  };
+
+  const handleOpenDeleteDialog = (produto: Produto) => {
+    setProdutoToDelete(produto);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!produtoToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("produtos")
+        .delete()
+        .eq("id", produtoToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Produto excluído com sucesso!");
+      setDeleteDialogOpen(false);
+      setProdutoToDelete(null);
+      fetchProdutos();
+    } catch (error: any) {
+      console.error("Erro ao excluir produto:", error);
+      if (error.code === "23503") {
+        toast.error("Não é possível excluir. Este produto está vinculado a anúncios.");
+      } else {
+        toast.error("Erro ao excluir produto");
+      }
     }
   };
 
@@ -313,6 +346,15 @@ export default function GerenciarProdutos() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDeleteDialog(produto)}
+                            title="Excluir"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                           <div className="flex items-center gap-2 border-l pl-2">
                             <Switch
                               checked={produto.ativo}
@@ -332,6 +374,27 @@ export default function GerenciarProdutos() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o produto "{produtoToDelete?.nome}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
