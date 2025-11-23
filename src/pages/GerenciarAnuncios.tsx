@@ -26,6 +26,7 @@ interface Anuncio {
   produto_id: string;
   marketplace_id: string;
   codigo_marketplace: string | null;
+  conta_marketplace_id: string | null;
   profiles: { name: string; empresa: string | null } | null;
   produtos: { nome: string };
   marketplaces: { nome: string; logo_url: string | null };
@@ -127,7 +128,8 @@ export default function GerenciarAnuncios() {
           *,
           profiles:cliente_id (name, empresa),
           produtos (nome),
-          marketplaces (nome, logo_url)
+          marketplaces (nome, logo_url),
+          conta_marketplace:conta_marketplace_id (id, nome_conta, marketplace)
         `)
         .order("ultima_atualizacao", { ascending: false });
 
@@ -143,40 +145,15 @@ export default function GerenciarAnuncios() {
       if (clienteFilter !== "all") {
         query = query.eq("cliente_id", clienteFilter);
       }
+      if (contaFilter !== "all") {
+        query = query.eq("conta_marketplace_id", contaFilter);
+      }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Buscar contas de marketplace para cada anúncio
-      const anunciosComContas = await Promise.all(
-        (data || []).map(async (anuncio: any) => {
-          if (anuncio.codigo_marketplace && anuncio.marketplaces?.nome) {
-            const { data: contaData } = await supabase
-              .from("contas_marketplace")
-              .select("id, nome_conta, marketplace")
-              .eq("marketplace", anuncio.marketplaces.nome)
-              .limit(1)
-              .maybeSingle();
-
-            return {
-              ...anuncio,
-              conta_marketplace: contaData || undefined,
-            };
-          }
-          return anuncio;
-        })
-      );
-
-      // Aplicar filtro de conta
-      let anunciosFiltrados = anunciosComContas;
-      if (contaFilter !== "all") {
-        anunciosFiltrados = anunciosComContas.filter(
-          (a: any) => a.conta_marketplace?.id === contaFilter
-        );
-      }
-
-      setAnuncios(anunciosFiltrados as Anuncio[]);
+      setAnuncios(data as Anuncio[] || []);
     } catch (error) {
       console.error("Erro ao buscar anúncios:", error);
       toast.error("Erro ao carregar anúncios");
@@ -246,7 +223,7 @@ export default function GerenciarAnuncios() {
     setMarketplaceId(anuncio.marketplace_id);
     setClienteId(anuncio.cliente_id || "");
     setPrecoDetectado(anuncio.preco_detectado.toString());
-    setContaMarketplaceId(anuncio.conta_marketplace?.id || "");
+    setContaMarketplaceId(anuncio.conta_marketplace_id || "");
     setEditDialogOpen(true);
   };
 
@@ -280,6 +257,7 @@ export default function GerenciarAnuncios() {
           preco_detectado: preco,
           preco_minimo: produtoSelecionado.preco_minimo,
           status: preco < produtoSelecionado.preco_minimo ? "Abaixo do mínimo" : "OK",
+          conta_marketplace_id: contaMarketplaceId || null,
         })
         .eq("id", editingAnuncio.id);
 
@@ -693,6 +671,26 @@ export default function GerenciarAnuncios() {
                   onChange={(e) => setPrecoDetectado(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-conta-marketplace">Conta de Marketplace</Label>
+              <Select 
+                value={contaMarketplaceId || "none"} 
+                onValueChange={(value) => setContaMarketplaceId(value === "none" ? "" : value)}
+              >
+                <SelectTrigger id="edit-conta-marketplace">
+                  <SelectValue placeholder="Selecione a conta (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {contasMarketplace.map((conta) => (
+                    <SelectItem key={conta.id} value={conta.id}>
+                      {conta.nome_conta} ({conta.marketplace})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

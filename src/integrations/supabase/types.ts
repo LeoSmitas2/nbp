@@ -19,6 +19,7 @@ export type Database = {
           avaliacoes: string | null
           cliente_id: string | null
           codigo_marketplace: string | null
+          conta_marketplace_id: string | null
           desconto: number | null
           id: string
           imagem: string | null
@@ -39,6 +40,7 @@ export type Database = {
           avaliacoes?: string | null
           cliente_id?: string | null
           codigo_marketplace?: string | null
+          conta_marketplace_id?: string | null
           desconto?: number | null
           id?: string
           imagem?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           avaliacoes?: string | null
           cliente_id?: string | null
           codigo_marketplace?: string | null
+          conta_marketplace_id?: string | null
           desconto?: number | null
           id?: string
           imagem?: string | null
@@ -81,6 +84,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anuncios_monitorados_conta_marketplace_id_fkey"
+            columns: ["conta_marketplace_id"]
+            isOneToOne: false
+            referencedRelation: "contas_marketplace"
             referencedColumns: ["id"]
           },
           {
