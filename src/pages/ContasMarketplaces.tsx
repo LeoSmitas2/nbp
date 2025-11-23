@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Pencil, Plus, Trash2, Store, Building2, Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Pencil, Plus, Trash2, Store, Building2, Filter, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ContaMarketplace {
@@ -199,15 +200,19 @@ export default function ContasMarketplaces() {
   };
 
   const handleAddConta = async () => {
-    if (!novaConta.nome_conta.trim() || !novaConta.marketplace || !novaConta.cliente_id) {
-      toast.error("Preencha todos os campos");
+    if (!novaConta.nome_conta.trim() || !novaConta.marketplace) {
+      toast.error("Preencha o nome da conta e o marketplace");
       return;
     }
 
     try {
       const { error } = await supabase
         .from("contas_marketplace")
-        .insert([novaConta]);
+        .insert([{
+          nome_conta: novaConta.nome_conta,
+          marketplace: novaConta.marketplace,
+          cliente_id: novaConta.cliente_id || null
+        }]);
 
       if (error) throw error;
 
@@ -339,6 +344,7 @@ export default function ContasMarketplaces() {
                   <TableHead>Cliente</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -352,20 +358,43 @@ export default function ContasMarketplaces() {
                         {conta.marketplace}
                       </div>
                     </TableCell>
-                    <TableCell>{conta.cliente.name}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {conta.cliente.empresa || "-"}
-                      </div>
+                      {conta.cliente_id ? conta.cliente.name : (
+                        <span className="text-muted-foreground italic">Sem cliente</span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{conta.cliente.email}</TableCell>
+                    <TableCell>
+                      {conta.cliente_id ? (
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {conta.cliente.empresa || "-"}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {conta.cliente_id ? conta.cliente.email : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {!conta.cliente_id ? (
+                        <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                          <AlertCircle className="h-3 w-3" />
+                          Não associada
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="w-fit">
+                          Associada
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(conta.cliente_id)}
-                        title="Editar contas do cliente"
+                        disabled={!conta.cliente_id}
+                        title={conta.cliente_id ? "Editar contas do cliente" : "Associe a um cliente primeiro"}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -525,13 +554,13 @@ export default function ContasMarketplaces() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nova-cliente">Cliente *</Label>
+              <Label htmlFor="nova-cliente">Cliente</Label>
               <Select
                 value={novaConta.cliente_id}
                 onValueChange={(value) => setNovaConta({ ...novaConta, cliente_id: value })}
               >
                 <SelectTrigger id="nova-cliente">
-                  <SelectValue placeholder="Selecione o cliente" />
+                  <SelectValue placeholder="Selecione o cliente (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {clientes.map((cliente) => (
@@ -541,6 +570,9 @@ export default function ContasMarketplaces() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Você pode associar o cliente depois
+              </p>
             </div>
           </div>
 
