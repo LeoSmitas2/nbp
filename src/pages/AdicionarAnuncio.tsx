@@ -194,14 +194,8 @@ export default function AdicionarAnuncio() {
       // Acionar webhook após sucesso
       if (codigoMLB) {
         try {
-          await fetch("https://automacao.nashbrasil.com.br/webhook-test/addanuncios", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              mlb: codigoMLB,
-            }),
+          await fetch(`https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`, {
+            method: "GET",
           });
         } catch (webhookError) {
           console.error("Erro ao acionar webhook:", webhookError);
