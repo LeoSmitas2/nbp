@@ -13,6 +13,7 @@ import DashboardCliente from "./pages/DashboardCliente";
 import DashboardAdmin from "./pages/DashboardAdmin";
 import NovaDenuncia from "./pages/NovaDenuncia";
 import MinhasDenuncias from "./pages/MinhasDenuncias";
+import DenunciasContraMim from "./pages/DenunciasContraMim";
 import GerenciarDenuncias from "./pages/GerenciarDenuncias";
 import GerenciarProdutos from "./pages/GerenciarProdutos";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
@@ -76,6 +77,17 @@ const App = () => (
                 <ProtectedRoute requireApproval>
                   <Layout>
                     <MinhasDenuncias />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/denuncias-contra-mim"
+              element={
+                <ProtectedRoute requireApproval>
+                  <Layout>
+                    <DenunciasContraMim />
                   </Layout>
                 </ProtectedRoute>
               }

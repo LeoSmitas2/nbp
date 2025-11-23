@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, AlertCircle, Search } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, AlertCircle, Search, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -196,6 +196,12 @@ export default function DashboardCliente() {
                 <Button className="w-full justify-start" variant="outline">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Ver Minhas Denúncias
+                </Button>
+              </Link>
+              <Link to="/denuncias-contra-mim">
+                <Button className="w-full justify-start" variant="outline">
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Denúncias Associadas a Mim
                 </Button>
               </Link>
             </CardContent>
