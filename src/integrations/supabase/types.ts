@@ -17,6 +17,7 @@ export type Database = {
       anuncios_monitorados: {
         Row: {
           cliente_id: string | null
+          codigo_marketplace: string | null
           id: string
           marketplace_id: string
           origem: Database["public"]["Enums"]["ad_origin"]
@@ -29,6 +30,7 @@ export type Database = {
         }
         Insert: {
           cliente_id?: string | null
+          codigo_marketplace?: string | null
           id?: string
           marketplace_id: string
           origem: Database["public"]["Enums"]["ad_origin"]
@@ -41,6 +43,7 @@ export type Database = {
         }
         Update: {
           cliente_id?: string | null
+          codigo_marketplace?: string | null
           id?: string
           marketplace_id?: string
           origem?: Database["public"]["Enums"]["ad_origin"]
