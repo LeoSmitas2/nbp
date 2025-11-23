@@ -41,7 +41,7 @@ export default function ContasMarketplaces() {
   
   // Filtros
   const [filtroNome, setFiltroNome] = useState("");
-  const [filtroMarketplace, setFiltroMarketplace] = useState("");
+  const [filtroMarketplace, setFiltroMarketplace] = useState("all");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroEmpresa, setFiltroEmpresa] = useState("");
   
@@ -57,7 +57,7 @@ export default function ContasMarketplaces() {
   // Filtrar contas
   const contasFiltradas = contas.filter(conta => {
     const matchNome = conta.nome_conta.toLowerCase().includes(filtroNome.toLowerCase());
-    const matchMarketplace = !filtroMarketplace || conta.marketplace === filtroMarketplace;
+    const matchMarketplace = filtroMarketplace === "all" || !filtroMarketplace || conta.marketplace === filtroMarketplace;
     const matchCliente = conta.cliente.name.toLowerCase().includes(filtroCliente.toLowerCase());
     const matchEmpresa = (conta.cliente.empresa || "").toLowerCase().includes(filtroEmpresa.toLowerCase());
     
@@ -223,7 +223,7 @@ export default function ContasMarketplaces() {
 
   const limparFiltros = () => {
     setFiltroNome("");
-    setFiltroMarketplace("");
+    setFiltroMarketplace("all");
     setFiltroCliente("");
     setFiltroEmpresa("");
   };
@@ -288,7 +288,7 @@ export default function ContasMarketplaces() {
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {marketplaces.map((mp) => (
                       <SelectItem key={mp} value={mp}>
                         {mp}
@@ -316,7 +316,7 @@ export default function ContasMarketplaces() {
                 />
               </div>
             </div>
-            {(filtroNome || filtroMarketplace || filtroCliente || filtroEmpresa) && (
+            {(filtroNome || (filtroMarketplace && filtroMarketplace !== "all") || filtroCliente || filtroEmpresa) && (
               <Button variant="outline" size="sm" onClick={limparFiltros}>
                 Limpar Filtros
               </Button>
