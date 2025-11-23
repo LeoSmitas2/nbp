@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface Produto {
   id: string;
@@ -21,25 +21,75 @@ interface Produto {
 interface Marketplace {
   id: string;
   nome: string;
+  url_base: string;
+}
+
+interface DadosWebhook {
+  preço: number;
+  Titulo: string;
+  vendas: string;
+  Avaliações: string;
+  "Vendido Por": string;
+  imagem: string;
+  ML: string;
+  desconto: number;
+  "preco cheio": number;
 }
 
 export default function NovaDenuncia() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<string>("");
+  const [dadosWebhook, setDadosWebhook] = useState<DadosWebhook | null>(null);
+  const [anuncioExistente, setAnuncioExistente] = useState<boolean>(false);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
   
   const [url, setUrl] = useState("");
   const [produtoId, setProdutoId] = useState("");
-  const [marketplaceId, setMarketplaceId] = useState("");
-  const [precoInformado, setPrecoInformado] = useState("");
+  const [marketplaceDetectado, setMarketplaceDetectado] = useState<string | null>(null);
+  const [codigoMLB, setCodigoMLB] = useState<string | null>(null);
   const [observacoes, setObservacoes] = useState("");
 
   useEffect(() => {
     fetchProdutos();
     fetchMarketplaces();
   }, []);
+
+  useEffect(() => {
+    detectarMarketplace();
+    extrairCodigoMLB();
+  }, [url]);
+
+  // Disparar webhook automaticamente quando tiver código MLB
+  useEffect(() => {
+    const verificarEBuscarDados = async () => {
+      if (codigoMLB && url) {
+        // Verificar se já existe denúncia com este código
+        const { data: denunciasExistentes, error } = await supabase
+          .from("denuncias")
+          .select("id, url, produtos(nome)")
+          .eq("url", url);
+
+        if (!error && denunciasExistentes && denunciasExistentes.length > 0) {
+          setAnuncioExistente(true);
+          setDadosWebhook(null);
+          setWebhookLoading(false);
+          toast.error(`Esta URL já foi denunciada ${denunciasExistentes.length} vez(es) anteriormente.`);
+        } else {
+          setAnuncioExistente(false);
+          buscarDadosWebhook();
+        }
+      } else {
+        setDadosWebhook(null);
+        setAnuncioExistente(false);
+      }
+    };
+
+    verificarEBuscarDados();
+  }, [codigoMLB]);
 
   const fetchProdutos = async () => {
     const { data, error } = await supabase
@@ -59,7 +109,7 @@ export default function NovaDenuncia() {
   const fetchMarketplaces = async () => {
     const { data, error } = await supabase
       .from("marketplaces")
-      .select("id, nome")
+      .select("id, nome, url_base")
       .eq("ativo", true)
       .order("nome");
 
@@ -71,6 +121,157 @@ export default function NovaDenuncia() {
     }
   };
 
+  const detectarMarketplace = () => {
+    if (!url) {
+      setMarketplaceDetectado(null);
+      return;
+    }
+
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+
+      // Encontrar marketplace que corresponde ao hostname
+      const marketplaceEncontrado = marketplaces.find((marketplace) => {
+        try {
+          const baseUrl = new URL(marketplace.url_base);
+          const baseHostname = baseUrl.hostname.toLowerCase();
+          
+          return hostname.includes(baseHostname.replace('www.', '')) || 
+                 baseHostname.replace('www.', '').includes(hostname.replace('www.', ''));
+        } catch {
+          return false;
+        }
+      });
+
+      setMarketplaceDetectado(marketplaceEncontrado?.nome || null);
+    } catch {
+      setMarketplaceDetectado(null);
+    }
+  };
+
+  const extrairCodigoMLB = () => {
+    if (!url) {
+      setCodigoMLB(null);
+      return;
+    }
+
+    try {
+      // Verificar se é Amazon
+      const isAmazon = url.toLowerCase().includes('amazon');
+      
+      if (isAmazon) {
+        // Procurar padrão ASIN da Amazon
+        const asinPatterns = [
+          /\/dp\/([A-Z0-9]{10})/i,
+          /\/product\/([A-Z0-9]{10})/i,
+          /\/gp\/product\/([A-Z0-9]{10})/i,
+          /[?&]ASIN=([A-Z0-9]{10})/i,
+          /\/(B[A-Z0-9]{9})/i,
+        ];
+
+        for (const pattern of asinPatterns) {
+          const match = url.match(pattern);
+          if (match && match[1].startsWith('B')) {
+            setCodigoMLB(match[1].toUpperCase());
+            return;
+          }
+        }
+      } else {
+        // Procurar padrão MLB para Mercado Livre
+        const regexPatterns = [
+          /MLB-?(\d{10,})/i,
+          /\/p\/MLB-?(\d{10,})/i,
+          /item_id=MLB-?(\d{10,})/i,
+        ];
+
+        for (const pattern of regexPatterns) {
+          const match = url.match(pattern);
+          if (match) {
+            const codigo = `MLB-${match[1]}`;
+            setCodigoMLB(codigo);
+            return;
+          }
+        }
+      }
+
+      setCodigoMLB(null);
+    } catch {
+      setCodigoMLB(null);
+    }
+  };
+
+  const buscarDadosWebhook = async () => {
+    if (!codigoMLB) return;
+
+    setWebhookLoading(true);
+    setWebhookStatus("Buscando informações do produto...");
+    setDadosWebhook(null);
+
+    try {
+      const params = new URLSearchParams({
+        codigo: codigoMLB,
+        url: url,
+        marketplace: marketplaceDetectado || 'Desconhecido'
+      });
+
+      const webhookResponse = await fetch(
+        `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?${params.toString()}`,
+        { method: "GET" }
+      );
+
+      if (webhookResponse.ok) {
+        const webhookData = await webhookResponse.json();
+        console.log("Resposta da webhook:", webhookData);
+
+        // Verificar se é uma resposta assíncrona
+        if (webhookData.message === "Workflow was started") {
+          setWebhookStatus("Processamento iniciado...");
+          
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          const retryResponse = await fetch(
+            `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?${params.toString()}`,
+            { method: "GET" }
+          );
+          
+          if (retryResponse.ok) {
+            const retryData = await retryResponse.json();
+            console.log("Segunda tentativa:", retryData);
+            
+            if (Array.isArray(retryData) && retryData.length > 0 && retryData[0].data) {
+              const data = retryData[0].data[0];
+              setDadosWebhook(data);
+              setWebhookStatus("");
+              return;
+            }
+          }
+          
+          toast.info("Processamento em andamento. Você pode preencher os dados manualmente.");
+          setWebhookStatus("");
+          return;
+        }
+
+        // Verificar formato de resposta com array
+        if (Array.isArray(webhookData) && webhookData.length > 0 && webhookData[0].data) {
+          const data = webhookData[0].data[0];
+          setDadosWebhook(data);
+          setWebhookStatus("");
+        } else {
+          console.error("Formato de resposta inválido:", webhookData);
+          toast.info("Formato de resposta inválido. Preencha os dados manualmente.");
+        }
+      } else {
+        toast.error("Não foi possível conectar ao serviço de dados.");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar webhook:", error);
+      toast.info("Erro ao buscar dados automaticamente. Você pode preencher manualmente.");
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -79,26 +280,32 @@ export default function NovaDenuncia() {
       return;
     }
 
-    if (!url || !produtoId || !marketplaceId || !precoInformado) {
+    if (!url || !produtoId || !marketplaceDetectado) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    const preco = parseFloat(precoInformado);
-    if (isNaN(preco) || preco <= 0) {
-      toast.error("Preço inválido");
+    const precoInformado = dadosWebhook?.preço || 0;
+    if (!dadosWebhook || precoInformado <= 0) {
+      toast.error("Não foi possível obter o preço do anúncio automaticamente");
       return;
     }
 
     setLoading(true);
 
     try {
+      // Encontrar marketplace ID
+      const marketplace = marketplaces.find(m => m.nome === marketplaceDetectado);
+      if (!marketplace) {
+        throw new Error("Marketplace não encontrado");
+      }
+
       const { error } = await supabase.from("denuncias").insert({
         cliente_id: user.id,
         produto_id: produtoId,
-        marketplace_id: marketplaceId,
+        marketplace_id: marketplace.id,
         url: url,
-        preco_informado: preco,
+        preco_informado: precoInformado,
         observacoes: observacoes || null,
         status: "Solicitada",
       });
@@ -110,9 +317,10 @@ export default function NovaDenuncia() {
       // Reset form
       setUrl("");
       setProdutoId("");
-      setMarketplaceId("");
-      setPrecoInformado("");
       setObservacoes("");
+      setDadosWebhook(null);
+      setCodigoMLB(null);
+      setMarketplaceDetectado(null);
 
       // Navigate to minhas denuncias after 2 seconds
       setTimeout(() => {
@@ -130,127 +338,228 @@ export default function NovaDenuncia() {
   const produtoSelecionado = produtos.find(p => p.id === produtoId);
 
   return (
-    <div className="container mx-auto max-w-3xl py-8 px-4">
-      <Card className="shadow-elegant">
-        <CardHeader>
-          <CardTitle className="text-2xl">Nova Denúncia</CardTitle>
-          <CardDescription>
-            Reporte anúncios com preços abaixo do mínimo permitido
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="url">Link do Anúncio *</Label>
-              <Input
-                id="url"
-                type="url"
-                placeholder="https://exemplo.com/produto/123"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Cole o link completo do anúncio que deseja denunciar
-              </p>
-            </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6 max-w-2xl">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/dashboard-cliente")}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
+        </Button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="shadow-elegant">
+          <CardHeader>
+            <CardTitle>Nova Denúncia</CardTitle>
+            <CardDescription>
+              Reporte anúncios com preços abaixo do mínimo permitido. Os dados serão obtidos automaticamente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="url">Link do Anúncio *</Label>
+                <Input
+                  id="url"
+                  type="url"
+                  placeholder="https://exemplo.com/produto/anuncio"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="text-base"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cole o link completo do anúncio que deseja denunciar
+                </p>
+                {marketplaceDetectado && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span>Marketplace detectado:</span>
+                    <Badge variant="secondary">{marketplaceDetectado}</Badge>
+                    {codigoMLB && (
+                      <>
+                        <span>•</span>
+                        <span>Código:</span>
+                        <Badge variant="outline">{codigoMLB}</Badge>
+                      </>
+                    )}
+                  </div>
+                )}
+                {url && !marketplaceDetectado && (
+                  <p className="text-sm text-amber-600">
+                    ⚠️ Marketplace não identificado. Verifique se a URL está correta.
+                  </p>
+                )}
+                {anuncioExistente && codigoMLB && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg animate-fade-in">
+                    <p className="text-sm text-destructive font-medium">
+                      ⚠️ Esta URL já foi denunciada anteriormente
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Não é possível registrar denúncias duplicadas.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="produto">Produto *</Label>
-                <Select value={produtoId} onValueChange={setProdutoId} required>
+                <Select value={produtoId} onValueChange={setProdutoId}>
                   <SelectTrigger id="produto">
                     <SelectValue placeholder="Selecione o produto" />
                   </SelectTrigger>
                   <SelectContent>
                     {produtos.map((produto) => (
                       <SelectItem key={produto.id} value={produto.id}>
-                        {produto.nome}
+                        {produto.nome} (Preço mín: R$ {produto.preco_minimo.toFixed(2)})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Indicador de progresso da webhook */}
+              {webhookLoading && (
+                <div className="flex items-center justify-center gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground">{webhookStatus}</span>
+                    <span className="text-xs text-muted-foreground">Aguarde enquanto processamos os dados...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Dados retornados da webhook */}
+              {dadosWebhook && !webhookLoading && (
+                <div className="space-y-4 p-4 bg-card rounded-lg border animate-fade-in">
+                  <div className="flex items-start gap-4">
+                    {dadosWebhook.imagem && (
+                      <img 
+                        src={dadosWebhook.imagem} 
+                        alt={dadosWebhook.Titulo}
+                        className="w-24 h-24 object-cover rounded-md border"
+                      />
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <h3 className="font-semibold text-lg">{dadosWebhook.Titulo}</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Preço:</span>
+                          <span className="ml-2 font-semibold text-primary">
+                            R$ {dadosWebhook.preço.toFixed(2)}
+                          </span>
+                        </div>
+                        {dadosWebhook["preco cheio"] > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Preço cheio:</span>
+                            <span className="ml-2 line-through text-muted-foreground">
+                              R$ {dadosWebhook["preco cheio"].toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {dadosWebhook.desconto > 0 && (
+                          <div>
+                            <Badge variant="secondary" className="text-xs">
+                              {dadosWebhook.desconto}% OFF
+                            </Badge>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-muted-foreground">Vendas:</span>
+                          <span className="ml-2">{dadosWebhook.vendas}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Avaliações:</span>
+                          <span className="ml-2">{dadosWebhook.Avaliações}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Vendedor:</span>
+                          <span className="ml-2 font-medium">{dadosWebhook["Vendido Por"]}</span>
+                        </div>
+                        {dadosWebhook.ML && (
+                          <div className="col-span-2">
+                            <Badge variant="outline" className="text-xs">
+                              {dadosWebhook.ML}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      {produtoId && (
+                        <div className="pt-2 border-t">
+                          {(() => {
+                            const produto = produtos.find(p => p.id === produtoId);
+                            if (!produto) return null;
+                            const abaixoMinimo = dadosWebhook.preço < produto.preco_minimo;
+                            return (
+                              <div className={`flex items-center gap-2 text-sm ${abaixoMinimo ? 'text-destructive' : 'text-green-600'}`}>
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span>
+                                  {abaixoMinimo 
+                                    ? `⚠️ Preço abaixo do mínimo (R$ ${produto.preco_minimo.toFixed(2)})`
+                                    : `✓ Preço dentro do permitido (mín: R$ ${produto.preco_minimo.toFixed(2)})`
+                                  }
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {produtoSelecionado && !dadosWebhook && !webhookLoading && (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Preço mínimo permitido para</span>{" "}
+                    <strong>{produtoSelecionado.nome}</strong>:{" "}
+                    <strong className="text-primary">
+                      R$ {produtoSelecionado.preco_minimo.toFixed(2)}
+                    </strong>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
-                <Label htmlFor="marketplace">Marketplace *</Label>
-                <Select value={marketplaceId} onValueChange={setMarketplaceId} required>
-                  <SelectTrigger id="marketplace">
-                    <SelectValue placeholder="Selecione o marketplace" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {marketplaces.map((marketplace) => (
-                      <SelectItem key={marketplace.id} value={marketplace.id}>
-                        {marketplace.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="observacoes">Observações (opcional)</Label>
+                <Textarea
+                  id="observacoes"
+                  placeholder="Adicione informações adicionais que possam ajudar na análise..."
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  rows={4}
+                />
               </div>
-            </div>
 
-            {produtoSelecionado && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Preço mínimo permitido para <strong>{produtoSelecionado.nome}</strong>:{" "}
-                  <strong className="text-primary">
-                    {new Intl.NumberFormat("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    }).format(produtoSelecionado.preco_minimo)}
-                  </strong>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="preco">Preço Encontrado (R$) *</Label>
-              <Input
-                id="preco"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={precoInformado}
-                onChange={(e) => setPrecoInformado(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Informe o preço do produto encontrado no anúncio
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações (opcional)</Label>
-              <Textarea
-                id="observacoes"
-                placeholder="Adicione informações adicionais que possam ajudar na análise..."
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={4}
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1"
-              >
-                {loading ? "Enviando..." : "Registrar Denúncia"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/dashboard-cliente")}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="submit"
+                  disabled={loading || webhookLoading || !marketplaceDetectado || anuncioExistente || !dadosWebhook}
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Registrar Denúncia"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/dashboard-cliente")}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
