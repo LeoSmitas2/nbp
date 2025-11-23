@@ -194,19 +194,37 @@ export default function AdicionarAnuncio() {
       // Acionar webhook após sucesso
       if (codigoMLB) {
         try {
-          await fetch(`https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`, {
-            method: "GET",
-          });
+          const webhookResponse = await fetch(
+            `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`, 
+            { method: "GET" }
+          );
+          
+          if (webhookResponse.ok) {
+            toast({
+              title: "Anúncio adicionado com sucesso!",
+              description: "O anúncio foi cadastrado e enviado para processamento.",
+            });
+          } else {
+            toast({
+              title: "Anúncio adicionado",
+              description: "O anúncio foi cadastrado, mas houve um problema ao processar o webhook.",
+              variant: "destructive",
+            });
+          }
         } catch (webhookError) {
           console.error("Erro ao acionar webhook:", webhookError);
-          // Não falha a operação se o webhook falhar
+          toast({
+            title: "Anúncio adicionado",
+            description: "O anúncio foi cadastrado, mas o webhook não pôde ser acionado.",
+            variant: "destructive",
+          });
         }
+      } else {
+        toast({
+          title: "Anúncio adicionado com sucesso!",
+          description: "O anúncio foi cadastrado no sistema.",
+        });
       }
-
-      toast({
-        title: "Anúncio adicionado com sucesso!",
-        description: "O anúncio foi cadastrado no sistema.",
-      });
 
       navigate("/gerenciar-anuncios");
     } catch (error: any) {
