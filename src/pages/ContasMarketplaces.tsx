@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Pencil, Plus, Trash2, Store, Building2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Store, Building2, Filter } from "lucide-react";
 import { toast } from "sonner";
 
 interface ContaMarketplace {
@@ -35,10 +35,34 @@ export default function ContasMarketplaces() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingClienteId, setEditingClienteId] = useState<string | null>(null);
   const [contasCliente, setContasCliente] = useState<{ nome: string; marketplace: string; cliente_id: string }[]>([]);
+  
+  // Filtros
+  const [filtroNome, setFiltroNome] = useState("");
+  const [filtroMarketplace, setFiltroMarketplace] = useState("");
+  const [filtroCliente, setFiltroCliente] = useState("");
+  const [filtroEmpresa, setFiltroEmpresa] = useState("");
+  
+  // Nova conta
+  const [novaConta, setNovaConta] = useState({
+    nome_conta: "",
+    marketplace: "",
+    cliente_id: ""
+  });
 
   const marketplaces = ["Mercado Livre", "Shopee", "Amazon", "Magalu", "Americanas"];
+  
+  // Filtrar contas
+  const contasFiltradas = contas.filter(conta => {
+    const matchNome = conta.nome_conta.toLowerCase().includes(filtroNome.toLowerCase());
+    const matchMarketplace = !filtroMarketplace || conta.marketplace === filtroMarketplace;
+    const matchCliente = conta.cliente.name.toLowerCase().includes(filtroCliente.toLowerCase());
+    const matchEmpresa = (conta.cliente.empresa || "").toLowerCase().includes(filtroEmpresa.toLowerCase());
+    
+    return matchNome && matchMarketplace && matchCliente && matchEmpresa;
+  });
 
   useEffect(() => {
     fetchContas();
@@ -174,6 +198,36 @@ export default function ContasMarketplaces() {
     }
   };
 
+  const handleAddConta = async () => {
+    if (!novaConta.nome_conta.trim() || !novaConta.marketplace || !novaConta.cliente_id) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("contas_marketplace")
+        .insert([novaConta]);
+
+      if (error) throw error;
+
+      toast.success("Conta adicionada com sucesso");
+      setIsAddDialogOpen(false);
+      setNovaConta({ nome_conta: "", marketplace: "", cliente_id: "" });
+      fetchContas();
+    } catch (error) {
+      console.error("Erro ao adicionar conta:", error);
+      toast.error("Erro ao adicionar conta");
+    }
+  };
+
+  const limparFiltros = () => {
+    setFiltroNome("");
+    setFiltroMarketplace("");
+    setFiltroCliente("");
+    setFiltroEmpresa("");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -194,18 +248,87 @@ export default function ContasMarketplaces() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Store className="h-5 w-5" />
-            Clientes e suas Contas
-          </CardTitle>
-          <CardDescription>
-            Lista de todos os clientes e suas lojas cadastradas nos marketplaces
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Store className="h-5 w-5" />
+                Clientes e suas Contas
+              </CardTitle>
+              <CardDescription>
+                Lista de todos os clientes e suas lojas cadastradas nos marketplaces
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Conta
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {contas.length === 0 ? (
+          {/* Filtros */}
+          <div className="mb-6 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="filtro-nome">Nome da Conta</Label>
+                <Input
+                  id="filtro-nome"
+                  placeholder="Filtrar por nome..."
+                  value={filtroNome}
+                  onChange={(e) => setFiltroNome(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filtro-marketplace">Marketplace</Label>
+                <Select value={filtroMarketplace} onValueChange={setFiltroMarketplace}>
+                  <SelectTrigger id="filtro-marketplace">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos</SelectItem>
+                    {marketplaces.map((mp) => (
+                      <SelectItem key={mp} value={mp}>
+                        {mp}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filtro-cliente">Cliente</Label>
+                <Input
+                  id="filtro-cliente"
+                  placeholder="Filtrar por cliente..."
+                  value={filtroCliente}
+                  onChange={(e) => setFiltroCliente(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filtro-empresa">Empresa</Label>
+                <Input
+                  id="filtro-empresa"
+                  placeholder="Filtrar por empresa..."
+                  value={filtroEmpresa}
+                  onChange={(e) => setFiltroEmpresa(e.target.value)}
+                />
+              </div>
+            </div>
+            {(filtroNome || filtroMarketplace || filtroCliente || filtroEmpresa) && (
+              <Button variant="outline" size="sm" onClick={limparFiltros}>
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
+          {contasFiltradas.length === 0 ? (
             <Alert>
-              <AlertDescription>Nenhuma conta cadastrada ainda.</AlertDescription>
+              <AlertDescription>
+                {contas.length === 0 
+                  ? "Nenhuma conta cadastrada ainda."
+                  : "Nenhuma conta encontrada com os filtros aplicados."}
+              </AlertDescription>
             </Alert>
           ) : (
             <Table>
@@ -220,7 +343,7 @@ export default function ContasMarketplaces() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {contas.map((conta) => (
+                {contasFiltradas.map((conta) => (
                   <TableRow key={conta.id}>
                     <TableCell className="font-medium">{conta.nome_conta}</TableCell>
                     <TableCell>
@@ -356,6 +479,77 @@ export default function ContasMarketplaces() {
             </Button>
             <Button onClick={handleSave}>
               Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para adicionar nova conta */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Nova Conta de Marketplace</DialogTitle>
+            <DialogDescription>
+              Preencha os dados da nova conta
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="nova-nome">Nome da Conta *</Label>
+              <Input
+                id="nova-nome"
+                placeholder="Nome da conta"
+                value={novaConta.nome_conta}
+                onChange={(e) => setNovaConta({ ...novaConta, nome_conta: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nova-marketplace">Marketplace *</Label>
+              <Select
+                value={novaConta.marketplace}
+                onValueChange={(value) => setNovaConta({ ...novaConta, marketplace: value })}
+              >
+                <SelectTrigger id="nova-marketplace">
+                  <SelectValue placeholder="Selecione o marketplace" />
+                </SelectTrigger>
+                <SelectContent>
+                  {marketplaces.map((mp) => (
+                    <SelectItem key={mp} value={mp}>
+                      {mp}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nova-cliente">Cliente *</Label>
+              <Select
+                value={novaConta.cliente_id}
+                onValueChange={(value) => setNovaConta({ ...novaConta, cliente_id: value })}
+              >
+                <SelectTrigger id="nova-cliente">
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientes.map((cliente) => (
+                    <SelectItem key={cliente.id} value={cliente.id}>
+                      {cliente.name} - {cliente.empresa || cliente.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddConta}>
+              Adicionar
             </Button>
           </DialogFooter>
         </DialogContent>
