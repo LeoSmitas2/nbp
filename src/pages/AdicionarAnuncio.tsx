@@ -197,7 +197,7 @@ export default function AdicionarAnuncio() {
 
     try {
       const webhookResponse = await fetch(
-        `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
+        `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
         { method: "GET" }
       );
 
@@ -214,7 +214,7 @@ export default function AdicionarAnuncio() {
           
           // Tentar buscar novamente
           const retryResponse = await fetch(
-            `https://automacao.nashbrasil.com.br/webhook-test/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
+            `https://webhook.automacao.nashbrasil.com.br/webhook/addanuncios?mlb=${encodeURIComponent(codigoMLB)}`,
             { method: "GET" }
           );
           
