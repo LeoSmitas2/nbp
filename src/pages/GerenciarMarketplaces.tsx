@@ -15,6 +15,7 @@ interface Marketplace {
   id: string;
   nome: string;
   url_base: string;
+  logo_url: string | null;
   ativo: boolean;
   created_at: string;
 }
@@ -29,6 +30,8 @@ export default function GerenciarMarketplaces() {
   // Form states
   const [nome, setNome] = useState("");
   const [urlBase, setUrlBase] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMarketplaces();
@@ -56,10 +59,14 @@ export default function GerenciarMarketplaces() {
       setEditingMarketplace(marketplace);
       setNome(marketplace.nome);
       setUrlBase(marketplace.url_base);
+      setLogoFile(null);
+      setLogoPreview(marketplace.logo_url);
     } else {
       setEditingMarketplace(null);
       setNome("");
       setUrlBase("");
+      setLogoFile(null);
+      setLogoPreview(null);
     }
     setDialogOpen(true);
   };
@@ -69,6 +76,24 @@ export default function GerenciarMarketplaces() {
     setEditingMarketplace(null);
     setNome("");
     setUrlBase("");
+    setLogoFile(null);
+    setLogoPreview(null);
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Por favor, selecione uma imagem válida");
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("A imagem deve ter no máximo 2MB");
+        return;
+      }
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
   };
 
   const handleSave = async () => {
@@ -87,6 +112,42 @@ export default function GerenciarMarketplaces() {
 
     setSaving(true);
     try {
+      let logoUrl = editingMarketplace?.logo_url || null;
+
+      // Upload logo if a new file was selected
+      if (logoFile) {
+        const fileExt = logoFile.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // Delete old logo if exists
+        if (editingMarketplace?.logo_url) {
+          const oldPath = editingMarketplace.logo_url.split("/").pop();
+          if (oldPath) {
+            await supabase.storage
+              .from("marketplace-logos")
+              .remove([oldPath]);
+          }
+        }
+
+        // Upload new logo
+        const { error: uploadError } = await supabase.storage
+          .from("marketplace-logos")
+          .upload(filePath, logoFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from("marketplace-logos")
+          .getPublicUrl(filePath);
+
+        logoUrl = urlData.publicUrl;
+      }
+
       if (editingMarketplace) {
         // Update
         const { error } = await supabase
@@ -94,6 +155,7 @@ export default function GerenciarMarketplaces() {
           .update({
             nome: nome.trim(),
             url_base: urlBase.trim(),
+            logo_url: logoUrl,
           })
           .eq("id", editingMarketplace.id);
 
@@ -106,6 +168,7 @@ export default function GerenciarMarketplaces() {
           .insert({
             nome: nome.trim(),
             url_base: urlBase.trim(),
+            logo_url: logoUrl,
             ativo: true,
           });
 
@@ -202,6 +265,32 @@ export default function GerenciarMarketplaces() {
                   URL principal da plataforma (incluindo https://)
                 </p>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="logo">Logo do Marketplace</Label>
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Formatos: JPG, PNG, WEBP (máx. 2MB)
+                </p>
+                {logoPreview && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium mb-2">Preview:</p>
+                    <div className="flex items-center justify-center p-4 border rounded-lg bg-muted/30">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="max-h-24 max-w-full object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <DialogFooter>
@@ -242,6 +331,7 @@ export default function GerenciarMarketplaces() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Logo</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>URL Base</TableHead>
                     <TableHead>Status</TableHead>
@@ -252,9 +342,21 @@ export default function GerenciarMarketplaces() {
                 <TableBody>
                   {marketplaces.map((marketplace) => (
                     <TableRow key={marketplace.id}>
+                      <TableCell>
+                        {marketplace.logo_url ? (
+                          <img
+                            src={marketplace.logo_url}
+                            alt={`Logo ${marketplace.nome}`}
+                            className="h-8 w-8 object-contain rounded"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                            <Store className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <Store className="h-4 w-4 text-muted-foreground" />
                           {marketplace.nome}
                         </div>
                       </TableCell>
