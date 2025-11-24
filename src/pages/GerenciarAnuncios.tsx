@@ -471,21 +471,21 @@ export default function GerenciarAnuncios() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[1400px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Foto</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Marketplace</TableHead>
-                    <TableHead>Conta</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Preço Detectado</TableHead>
-                    <TableHead>Preço Mínimo</TableHead>
-                    <TableHead>Diferença</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Atualização</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="w-20">Foto</TableHead>
+                    <TableHead className="min-w-[150px]">Produto</TableHead>
+                    <TableHead className="min-w-[140px]">Código</TableHead>
+                    <TableHead className="min-w-[140px]">Marketplace</TableHead>
+                    <TableHead className="min-w-[140px]">Conta</TableHead>
+                    <TableHead className="min-w-[140px]">Cliente</TableHead>
+                    <TableHead className="min-w-[120px]">Preço Detectado</TableHead>
+                    <TableHead className="min-w-[120px]">Preço Mínimo</TableHead>
+                    <TableHead className="min-w-[150px]">Diferença</TableHead>
+                    <TableHead className="min-w-[100px]">Status</TableHead>
+                    <TableHead className="min-w-[110px]">Atualização</TableHead>
+                    <TableHead className="min-w-[140px] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -555,13 +555,13 @@ export default function GerenciarAnuncios() {
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="font-semibold">
+                        <TableCell className="font-semibold whitespace-nowrap">
                           {new Intl.NumberFormat("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           }).format(anuncio.preco_detectado)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           {new Intl.NumberFormat("pt-BR", {
                             style: "currency",
                             currency: "BRL",
@@ -592,7 +592,7 @@ export default function GerenciarAnuncios() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <div className="text-sm">
                             <div>{new Date(anuncio.ultima_atualizacao).toLocaleDateString("pt-BR")}</div>
                             <div className="text-xs text-muted-foreground">
@@ -603,7 +603,7 @@ export default function GerenciarAnuncios() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right whitespace-nowrap">
                           <div className="flex gap-1 justify-end">
                             <Button
                               variant="ghost"
