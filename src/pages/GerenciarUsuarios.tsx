@@ -20,11 +20,18 @@ interface Usuario {
   empresa: string | null;
   cnpj: string | null;
   username: string | null;
+  telefone_contato: string | null;
   created_at: string;
   user_roles: {
     role: "ADMIN" | "CLIENT";
     status: "Pendente" | "Aprovado" | "Rejeitado";
   }[];
+}
+
+interface ContaMarketplace {
+  id: string;
+  nome_conta: string;
+  marketplace: string;
 }
 
 export default function GerenciarUsuarios() {
@@ -46,8 +53,14 @@ export default function GerenciarUsuarios() {
 
   // Edit form states
   const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editTelefone, setEditTelefone] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [editEmpresa, setEditEmpresa] = useState("");
   const [editRole, setEditRole] = useState<"ADMIN" | "CLIENT">("CLIENT");
+  const [editContas, setEditContas] = useState<ContaMarketplace[]>([]);
+  const [newContaNome, setNewContaNome] = useState("");
+  const [newContaMarketplace, setNewContaMarketplace] = useState("");
 
   // Add form states
   const [addEmail, setAddEmail] = useState("");
@@ -148,17 +161,86 @@ export default function GerenciarUsuarios() {
     }
   };
 
-  const handleOpenEdit = (usuario: Usuario) => {
+  const handleOpenEdit = async (usuario: Usuario) => {
     setEditingUsuario(usuario);
     setEditName(usuario.name);
+    setEditEmail(usuario.email);
+    setEditTelefone(usuario.telefone_contato || "");
+    setEditPassword("");
     setEditEmpresa(usuario.empresa || "");
     setEditRole(usuario.user_roles[0]?.role || "CLIENT");
+    
+    // Fetch marketplace accounts
+    try {
+      const { data, error } = await supabase
+        .from("contas_marketplace")
+        .select("*")
+        .eq("cliente_id", usuario.id);
+      
+      if (error) throw error;
+      setEditContas(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar contas:", error);
+      setEditContas([]);
+    }
+    
     setEditDialogOpen(true);
   };
 
+  const handleAddConta = async () => {
+    if (!newContaNome.trim() || !newContaMarketplace.trim() || !editingUsuario) {
+      toast.error("Nome da conta e marketplace são obrigatórios");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("contas_marketplace")
+        .insert({
+          nome_conta: newContaNome.trim(),
+          marketplace: newContaMarketplace.trim(),
+          cliente_id: editingUsuario.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setEditContas([...editContas, data]);
+      setNewContaNome("");
+      setNewContaMarketplace("");
+      toast.success("Conta adicionada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao adicionar conta:", error);
+      toast.error("Erro ao adicionar conta");
+    }
+  };
+
+  const handleRemoveConta = async (contaId: string) => {
+    try {
+      const { error } = await supabase
+        .from("contas_marketplace")
+        .delete()
+        .eq("id", contaId);
+
+      if (error) throw error;
+
+      setEditContas(editContas.filter(c => c.id !== contaId));
+      toast.success("Conta removida com sucesso!");
+    } catch (error) {
+      console.error("Erro ao remover conta:", error);
+      toast.error("Erro ao remover conta");
+    }
+  };
+
   const handleSaveEdit = async () => {
-    if (!editingUsuario || !editName.trim()) {
-      toast.error("Nome é obrigatório");
+    if (!editingUsuario || !editName.trim() || !editEmail.trim()) {
+      toast.error("Nome e email são obrigatórios");
+      return;
+    }
+
+    if (editPassword && editPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
@@ -169,11 +251,50 @@ export default function GerenciarUsuarios() {
         .from("profiles")
         .update({
           name: editName.trim(),
+          email: editEmail.trim(),
+          telefone_contato: editTelefone.trim() || null,
           empresa: editEmpresa.trim() || null,
         })
         .eq("id", editingUsuario.id);
 
       if (profileError) throw profileError;
+
+      // Update password if provided
+      if (editPassword.trim()) {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          toast.error("Você precisa estar autenticado");
+          return;
+        }
+
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          editingUsuario.id,
+          { password: editPassword }
+        );
+
+        if (passwordError) {
+          // Try using edge function as fallback
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-password`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: editingUsuario.id,
+                password: editPassword,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Erro ao atualizar senha");
+          }
+        }
+      }
 
       // Update role if changed
       if (editRole !== editingUsuario.user_roles[0]?.role) {
@@ -571,7 +692,7 @@ export default function GerenciarUsuarios() {
       )}
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
@@ -583,8 +704,8 @@ export default function GerenciarUsuarios() {
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-md text-sm">
                 <div>
-                  <span className="font-medium">Email:</span>{" "}
-                  {editingUsuario.email}
+                  <span className="font-medium">ID:</span>{" "}
+                  {editingUsuario.id.substring(0, 8)}...
                 </div>
                 <div>
                   <span className="font-medium">Cadastro:</span>{" "}
@@ -594,43 +715,126 @@ export default function GerenciarUsuarios() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nome *</Label>
-                <Input
-                  id="edit-name"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email *</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-telefone">Telefone de Contato</Label>
+                  <Input
+                    id="edit-telefone"
+                    placeholder="(00) 00000-0000"
+                    value={editTelefone}
+                    onChange={(e) => setEditTelefone(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-password">Nova Senha</Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    placeholder="Deixe em branco para não alterar"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo de 6 caracteres. Deixe em branco para não alterar.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-empresa">Empresa</Label>
+                  <Input
+                    id="edit-empresa"
+                    value={editEmpresa}
+                    onChange={(e) => setEditEmpresa(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Tipo de Usuário</Label>
+                  <Select
+                    value={editRole}
+                    onValueChange={(value) =>
+                      setEditRole(value as "ADMIN" | "CLIENT")
+                    }
+                  >
+                    <SelectTrigger id="edit-role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CLIENT">Cliente</SelectItem>
+                      <SelectItem value="ADMIN">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-empresa">Empresa</Label>
-                <Input
-                  id="edit-empresa"
-                  value={editEmpresa}
-                  onChange={(e) => setEditEmpresa(e.target.value)}
-                />
-              </div>
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Contas de Marketplace</Label>
+                  <Badge variant="secondary">{editContas.length} conta(s)</Badge>
+                </div>
+                
+                {editContas.length > 0 && (
+                  <div className="space-y-2">
+                    {editContas.map((conta) => (
+                      <div key={conta.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
+                        <div>
+                          <p className="font-medium">{conta.nome_conta}</p>
+                          <p className="text-xs text-muted-foreground">{conta.marketplace}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleRemoveConta(conta.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Tipo de Usuário</Label>
-                <Select
-                  value={editRole}
-                  onValueChange={(value) =>
-                    setEditRole(value as "ADMIN" | "CLIENT")
-                  }
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Nome da conta"
+                    value={newContaNome}
+                    onChange={(e) => setNewContaNome(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Marketplace (ex: Mercado Livre)"
+                    value={newContaMarketplace}
+                    onChange={(e) => setNewContaMarketplace(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddConta}
+                  className="w-full"
                 >
-                  <SelectTrigger id="edit-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CLIENT">Cliente</SelectItem>
-                    <SelectItem value="ADMIN">Administrador</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Administradores têm acesso total ao sistema
-                </p>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Conta
+                </Button>
               </div>
             </div>
           )}
