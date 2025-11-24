@@ -55,13 +55,13 @@ export default function Login() {
             className="w-full h-full object-cover"
           />
           {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/80 via-purple-500/70 to-pink-500/60" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 via-cyan-500/70 to-blue-400/60" />
         </div>
 
         {/* Animated Geometric Shapes */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full opacity-20 blur-3xl animate-pulse" />
-          <div className="absolute bottom-32 right-20 w-96 h-96 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full opacity-20 blur-3xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-96 h-96 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full opacity-15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
 
         {/* Content */}
@@ -151,7 +151,7 @@ export default function Login() {
 
             <Button 
               type="submit" 
-              className="w-full h-12 text-base font-medium bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              className="w-full h-12 text-base font-medium bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
               disabled={loading}
             >
               {loading ? "Entrando..." : "ENTRAR"}
