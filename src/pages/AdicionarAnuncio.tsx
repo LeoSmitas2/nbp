@@ -478,6 +478,7 @@ export default function AdicionarAnuncio() {
         origem: "Manual",
         status: novoStatus,
         cliente_id: null,
+        conta_marketplace_id: contaSelecionada || null,
         codigo_marketplace: codigoMLB,
         titulo_anuncio: dadosWebhook?.Titulo || null,
         imagem: dadosWebhook?.imagem || null,
