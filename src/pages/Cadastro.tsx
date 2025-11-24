@@ -4,9 +4,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Plus, X } from "lucide-react";
+import { Building2, User, Mail, Lock, Phone, IdCard, Plus, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logoNash from "@/assets/logo-nash.png";
 
@@ -100,165 +99,247 @@ export default function Cadastro() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-hero p-4">
-      <div className="w-full max-w-md animate-slide-up">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-20 items-center justify-center">
-            <img src={logoNash} alt="Nash" className="h-20 w-auto" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">Brand Protection</h1>
-          <p className="mt-2 text-blue-100">Sistema de Monitoramento de Anúncios</p>
+    <div className="flex min-h-screen overflow-hidden">
+      {/* Left Panel - Gradient Background with Geometric Shapes */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 p-12 items-center justify-center overflow-hidden">
+        {/* Animated Geometric Shapes */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full opacity-30 blur-3xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-96 h-96 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-20 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          
+          {/* Diagonal Lines */}
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <line x1="10%" y1="30%" x2="35%" y2="15%" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" className="animate-pulse" />
+            <line x1="15%" y1="50%" x2="45%" y2="25%" stroke="rgba(255,255,255,0.15)" strokeWidth="4" strokeLinecap="round" />
+            <line x1="20%" y1="70%" x2="50%" y2="45%" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" />
+            <line x1="60%" y1="80%" x2="85%" y2="60%" stroke="rgba(255,134,89,0.3)" strokeWidth="6" strokeLinecap="round" className="animate-pulse" style={{ animationDelay: '0.5s' }} />
+            <line x1="65%" y1="50%" x2="90%" y2="35%" stroke="rgba(255,134,89,0.25)" strokeWidth="5" strokeLinecap="round" />
+            <circle cx="75%" cy="25%" r="60" fill="rgba(255,134,89,0.3)" className="animate-pulse" style={{ animationDelay: '1.5s' }} />
+            <circle cx="25%" cy="85%" r="40" fill="rgba(255,255,255,0.15)" />
+          </svg>
         </div>
 
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle>Criar Conta</CardTitle>
-            <CardDescription>Cadastre-se para acessar o sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {success ? (
-              <Alert>
-                <AlertDescription>
-                  Conta criada com sucesso! Aguarde a aprovação da equipe Nash.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+        {/* Content */}
+        <div className="relative z-10 max-w-md text-white space-y-6 animate-fade-in">
+          <div className="flex items-center justify-center mb-8">
+            <img src={logoNash} alt="Nash" className="h-24 w-auto filter drop-shadow-lg" />
+          </div>
+          <h1 className="text-5xl font-bold leading-tight">
+            Junte-se a nós
+          </h1>
+          <p className="text-lg text-purple-100 leading-relaxed">
+            Crie sua conta e comece a proteger sua marca contra violações de preços em marketplaces.
+          </p>
+        </div>
+      </div>
 
+      {/* Right Panel - Signup Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background overflow-y-auto">
+        <div className="w-full max-w-md space-y-8 animate-slide-up py-8">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex justify-center mb-8">
+            <img src={logoNash} alt="Nash" className="h-16 w-auto" />
+          </div>
+
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">CRIAR CONTA</h2>
+            <p className="text-muted-foreground">Preencha os dados para se cadastrar</p>
+          </div>
+
+          {success ? (
+            <Alert className="bg-green-50 border-green-200">
+              <AlertDescription className="text-green-800">
+                ✓ Conta criada com sucesso! Aguarde a aprovação da equipe Nash.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <Alert variant="destructive" className="animate-shake">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="empresa">Nome da Empresa</Label>
-                  <Input
-                    id="empresa"
-                    type="text"
-                    placeholder="Nome da sua empresa"
-                    value={empresa}
-                    onChange={(e) => setEmpresa(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="empresa" className="text-sm font-medium">
+                    Nome da Empresa *
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="empresa"
+                      type="text"
+                      placeholder="Sua empresa"
+                      value={empresa}
+                      onChange={(e) => setEmpresa(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input
-                    id="cnpj"
-                    type="text"
-                    placeholder="00.000.000/0000-00"
-                    value={cnpj}
-                    onChange={(e) => setCnpj(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="cnpj" className="text-sm font-medium">
+                    CNPJ *
+                  </Label>
+                  <div className="relative">
+                    <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="cnpj"
+                      type="text"
+                      placeholder="00.000.000/0000-00"
+                      value={cnpj}
+                      onChange={(e) => setCnpj(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nome-contato">Nome da Pessoa de Contato</Label>
-                  <Input
-                    id="nome-contato"
-                    type="text"
-                    placeholder="João Silva"
-                    value={nomeContato}
-                    onChange={(e) => setNomeContato(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="nome-contato" className="text-sm font-medium">
+                    Nome do Contato *
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="nome-contato"
+                      type="text"
+                      placeholder="João Silva"
+                      value={nomeContato}
+                      onChange={(e) => setNomeContato(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone de Contato (WhatsApp)</Label>
-                  <Input
-                    id="telefone"
-                    type="tel"
-                    placeholder="(11) 99999-9999"
-                    value={telefoneContato}
-                    onChange={(e) => setTelefoneContato(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="telefone" className="text-sm font-medium">
+                    Telefone (WhatsApp) *
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="telefone"
+                      type="tel"
+                      placeholder="(11) 99999-9999"
+                      value={telefoneContato}
+                      onChange={(e) => setTelefoneContato(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="username">Nome de Usuário</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="seu_usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="username" className="text-sm font-medium">
+                    Nome de Usuário *
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="seu_usuario"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email *
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-11"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">
+                      Senha *
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10 h-11"
+                        required
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                      Confirmar *
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10 h-11"
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label>Lojas nos Marketplaces</Label>
+                    <Label className="text-sm font-medium">Lojas nos Marketplaces *</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={addLoja}
-                      className="h-8"
+                      className="h-8 text-xs"
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar Loja
+                      <Plus className="h-3 w-3 mr-1" />
+                      Adicionar
                     </Button>
                   </div>
                   
                   {lojas.map((loja, index) => (
-                    <div key={index} className="flex gap-2 items-start border border-border rounded-lg p-3">
+                    <div key={index} className="flex gap-2 items-start border border-border rounded-lg p-3 bg-muted/30">
                       <div className="flex-1 space-y-2">
                         <Input
                           placeholder="Nome da loja"
                           value={loja.nome}
                           onChange={(e) => updateLoja(index, "nome", e.target.value)}
+                          className="h-10"
                           required
                         />
                         <Select
                           value={loja.marketplace}
                           onValueChange={(value) => updateLoja(index, "marketplace", value)}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o marketplace" />
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Marketplace" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background">
                             {marketplaces.map((mp) => (
                               <SelectItem key={mp} value={mp}>
                                 {mp}
@@ -273,7 +354,7 @@ export default function Cadastro() {
                           variant="ghost"
                           size="icon"
                           onClick={() => removeLoja(index)}
-                          className="h-10 w-10 mt-1"
+                          className="h-9 w-9 mt-0.5"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -281,21 +362,30 @@ export default function Cadastro() {
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Criando conta..." : "Criar Conta"}
-                </Button>
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-base font-medium bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                disabled={loading}
+              >
+                {loading ? "Criando conta..." : "CRIAR CONTA"}
+              </Button>
 
-                <p className="text-center text-sm text-muted-foreground">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
                   Já tem uma conta?{" "}
-                  <Link to="/login" className="font-medium text-primary hover:underline">
+                  <Link 
+                    to="/login" 
+                    className="font-semibold text-primary hover:underline"
+                  >
                     Fazer login
                   </Link>
                 </p>
-              </form>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
