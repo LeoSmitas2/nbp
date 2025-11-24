@@ -684,14 +684,14 @@ export default function ContasMarketplaces() {
               <div className="space-y-2">
                 <Label htmlFor="edit-cliente">Cliente</Label>
                 <Select
-                  value={editingConta.cliente_id || ""}
-                  onValueChange={(value) => setEditingConta({ ...editingConta, cliente_id: value || null })}
+                  value={editingConta.cliente_id || "none"}
+                  onValueChange={(value) => setEditingConta({ ...editingConta, cliente_id: value === "none" ? null : value })}
                 >
                   <SelectTrigger id="edit-cliente">
                     <SelectValue placeholder="Selecione o cliente (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem cliente</SelectItem>
+                    <SelectItem value="none">Sem cliente</SelectItem>
                     {clientes.map((cliente) => (
                       <SelectItem key={cliente.id} value={cliente.id}>
                         {cliente.name} - {cliente.empresa || cliente.email}
