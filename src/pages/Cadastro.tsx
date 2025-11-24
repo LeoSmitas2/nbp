@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building2, User, Mail, Lock, Phone, IdCard, Plus, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logoNash from "@/assets/logo-nash.png";
+import heroBeach from "@/assets/hero-beach.jpeg";
 
 export default function Cadastro() {
   const [email, setEmail] = useState("");
@@ -100,36 +101,38 @@ export default function Cadastro() {
 
   return (
     <div className="flex min-h-screen overflow-hidden">
-      {/* Left Panel - Gradient Background with Geometric Shapes */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 p-12 items-center justify-center overflow-hidden">
+      {/* Left Panel - Hero Image with Overlay */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img 
+            src={heroBeach} 
+            alt="Beach" 
+            className="w-full h-full object-cover"
+          />
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/80 via-purple-500/70 to-pink-500/60" />
+        </div>
+
         {/* Animated Geometric Shapes */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full opacity-30 blur-3xl animate-pulse" />
-          <div className="absolute bottom-32 right-20 w-96 h-96 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-20 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          
-          {/* Diagonal Lines */}
-          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <line x1="10%" y1="30%" x2="35%" y2="15%" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" className="animate-pulse" />
-            <line x1="15%" y1="50%" x2="45%" y2="25%" stroke="rgba(255,255,255,0.15)" strokeWidth="4" strokeLinecap="round" />
-            <line x1="20%" y1="70%" x2="50%" y2="45%" stroke="rgba(255,255,255,0.2)" strokeWidth="3" strokeLinecap="round" />
-            <line x1="60%" y1="80%" x2="85%" y2="60%" stroke="rgba(255,134,89,0.3)" strokeWidth="6" strokeLinecap="round" className="animate-pulse" style={{ animationDelay: '0.5s' }} />
-            <line x1="65%" y1="50%" x2="90%" y2="35%" stroke="rgba(255,134,89,0.25)" strokeWidth="5" strokeLinecap="round" />
-            <circle cx="75%" cy="25%" r="60" fill="rgba(255,134,89,0.3)" className="animate-pulse" style={{ animationDelay: '1.5s' }} />
-            <circle cx="25%" cy="85%" r="40" fill="rgba(255,255,255,0.15)" />
-          </svg>
+          <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full opacity-20 blur-3xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-96 h-96 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
 
         {/* Content */}
-        <div className="relative z-10 max-w-md text-white space-y-6 animate-fade-in">
-          <div className="flex items-center justify-center mb-8">
-            <img src={logoNash} alt="Nash" className="h-24 w-auto filter drop-shadow-lg" />
+        <div className="relative z-10 flex items-center justify-center p-12 w-full">
+          <div className="max-w-md text-white space-y-6 animate-fade-in">
+            <div className="flex items-center justify-center mb-8">
+              <img src={logoNash} alt="Nash" className="h-24 w-auto filter drop-shadow-lg" />
+            </div>
+            <h1 className="text-5xl font-bold leading-tight">
+              Junte-se a nós
+            </h1>
+            <p className="text-lg text-white/90 leading-relaxed">
+              Crie sua conta e comece a proteger sua marca contra violações de preços em marketplaces.
+            </p>
           </div>
-          <h1 className="text-5xl font-bold leading-tight">
-            Junte-se a nós
-          </h1>
-          <p className="text-lg text-purple-100 leading-relaxed">
-            Crie sua conta e comece a proteger sua marca contra violações de preços em marketplaces.
-          </p>
         </div>
       </div>
 
