@@ -470,31 +470,31 @@ export default function GerenciarAnuncios() {
             <CardTitle>Anúncios ({anuncios.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[1400px]">
+            <div className="overflow-auto">
+              <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-20">Foto</TableHead>
-                    <TableHead className="min-w-[150px]">Produto</TableHead>
-                    <TableHead className="min-w-[140px]">Código</TableHead>
-                    <TableHead className="min-w-[140px]">Marketplace</TableHead>
-                    <TableHead className="min-w-[140px]">Conta</TableHead>
-                    <TableHead className="min-w-[140px]">Cliente</TableHead>
-                    <TableHead className="min-w-[120px]">Preço Detectado</TableHead>
-                    <TableHead className="min-w-[120px]">Preço Mínimo</TableHead>
-                    <TableHead className="min-w-[150px]">Diferença</TableHead>
-                    <TableHead className="min-w-[100px]">Status</TableHead>
-                    <TableHead className="min-w-[110px]">Atualização</TableHead>
-                    <TableHead className="min-w-[140px] text-right">Ações</TableHead>
+                    <TableHead className="w-16">Foto</TableHead>
+                    <TableHead className="max-w-[120px]">Produto</TableHead>
+                    <TableHead className="w-28">Código</TableHead>
+                    <TableHead className="w-24">Marketplace</TableHead>
+                    <TableHead className="w-24">Conta</TableHead>
+                    <TableHead className="w-32">Cliente</TableHead>
+                    <TableHead className="w-24 text-right">Preço Detectado</TableHead>
+                    <TableHead className="w-24 text-right">Preço Mínimo</TableHead>
+                    <TableHead className="w-20 text-center">Diferença</TableHead>
+                    <TableHead className="w-16 text-center">Status</TableHead>
+                    <TableHead className="w-24">Atualização</TableHead>
+                    <TableHead className="w-24 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {anuncios.map((anuncio) => {
                     return (
                       <TableRow key={anuncio.id}>
-                        <TableCell>
+                        <TableCell className="p-2">
                           {anuncio.imagem ? (
-                            <div className="w-16 h-16">
+                            <div className="w-12 h-12">
                               <img 
                                 src={anuncio.imagem} 
                                 alt="Foto do anúncio" 
@@ -502,51 +502,51 @@ export default function GerenciarAnuncios() {
                               />
                             </div>
                           ) : (
-                            <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-muted-foreground text-xs">
+                            <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-muted-foreground text-[10px]">
                               Sem foto
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-sm p-2 max-w-[120px] truncate" title={anuncio.produtos.nome}>
                           {anuncio.produtos.nome}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-2">
                           {anuncio.codigo_marketplace ? (
-                            <Badge variant="outline" className="font-mono text-xs">
+                            <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
                               {anuncio.codigo_marketplace}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
+                        <TableCell className="p-2">
+                          <div className="flex flex-col items-center gap-1">
                             {anuncio.marketplaces.logo_url && (
                               <img
                                 src={anuncio.marketplaces.logo_url}
                                 alt={anuncio.marketplaces.nome}
-                                className="h-5 w-5 object-contain"
+                                className="h-4 w-4 object-contain"
                               />
                             )}
-                            {anuncio.marketplaces.nome}
+                            <span className="text-[10px] text-center">{anuncio.marketplaces.nome}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-2">
                           {anuncio.conta_marketplace ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-col items-center gap-1">
                               <Store className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm">{anuncio.conta_marketplace.nome_conta}</span>
+                              <span className="text-[10px] text-center break-words max-w-[80px]">{anuncio.conta_marketplace.nome_conta}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-2">
                           {anuncio.profiles ? (
                             <div>
-                              <p className="text-sm">{anuncio.profiles.name}</p>
+                              <p className="text-xs truncate max-w-[120px]" title={anuncio.profiles.name}>{anuncio.profiles.name}</p>
                               {anuncio.profiles.empresa && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={anuncio.profiles.empresa}>
                                   {anuncio.profiles.empresa}
                                 </p>
                               )}
@@ -555,47 +555,43 @@ export default function GerenciarAnuncios() {
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="font-semibold whitespace-nowrap">
+                        <TableCell className="font-semibold text-xs p-2 text-right">
                           {new Intl.NumberFormat("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           }).format(anuncio.preco_detectado)}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="text-xs p-2 text-right">
                           {new Intl.NumberFormat("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           }).format(anuncio.preco_minimo)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-2 text-center">
                           {anuncio.preco_detectado < anuncio.preco_minimo ? (
-                            <div className="flex items-center gap-1 text-red-600">
+                            <div className="flex flex-col items-center gap-1 text-red-600">
                               <TrendingDown className="h-4 w-4" />
-                              <span className="text-sm font-medium">
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                }).format(anuncio.preco_detectado - anuncio.preco_minimo)}{" "}
-                                ({(((anuncio.preco_detectado - anuncio.preco_minimo) / anuncio.preco_minimo) * 100).toFixed(1)}%)
+                              <span className="text-[10px] font-medium">
+                                {(((anuncio.preco_detectado - anuncio.preco_minimo) / anuncio.preco_minimo) * 100).toFixed(0)}%
                               </span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-2 text-center">
                           {anuncio.status === "Abaixo do mínimo" ? (
-                            <ThumbsDown className="h-5 w-5 text-red-600" />
+                            <ThumbsDown className="h-4 w-4 text-red-600 mx-auto" />
                           ) : (
-                            <Badge className={getStatusColor(anuncio.status)}>
-                              {anuncio.status}
+                            <Badge className={getStatusColor(anuncio.status) + " text-[10px] px-1 py-0"}>
+                              OK
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="text-sm">
-                            <div>{new Date(anuncio.ultima_atualizacao).toLocaleDateString("pt-BR")}</div>
-                            <div className="text-xs text-muted-foreground">
+                        <TableCell className="p-2">
+                          <div className="text-[10px]">
+                            <div>{new Date(anuncio.ultima_atualizacao).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit' })}</div>
+                            <div className="text-[9px] text-muted-foreground">
                               {new Date(anuncio.ultima_atualizacao).toLocaleTimeString("pt-BR", {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -603,32 +599,34 @@ export default function GerenciarAnuncios() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right whitespace-nowrap">
-                          <div className="flex gap-1 justify-end">
+                        <TableCell className="text-right p-2">
+                          <div className="flex gap-0.5 justify-end">
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
+                              className="h-7 w-7 p-0"
                               onClick={() => handleOpenEdit(anuncio)}
                               title="Editar anúncio"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="icon"
+                              size="sm"
+                              className="h-7 w-7 p-0"
                               onClick={() => window.open(anuncio.url, "_blank")}
                               title="Ver anúncio"
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-3 w-3" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="icon"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                               onClick={() => handleOpenDelete(anuncio)}
                               title="Excluir anúncio"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </TableCell>
