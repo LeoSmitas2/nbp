@@ -1,0 +1,24 @@
+name: Sync to new-beginnings-project-46fae75d
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repo (nbp)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Force push to target repo
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git remote add target https://$GITHUB_ACTOR:${{ secrets.PAT }}@github.com/$GITHUB_ACTOR/new-beginnings-project-46fae75d.git
+          git push target --mirror
