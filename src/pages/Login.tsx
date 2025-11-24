@@ -52,7 +52,7 @@ export default function Login() {
         </div>
 
         {/* Animated Geometric Shapes (subtle) */}
-        <div className="absolute inset-0 overflow-hidden opacity-75">
+        <div className="absolute inset-0 overflow-hidden bg-gray-100 opacity-25">
           <div className="absolute top-20 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl animate-pulse" />
           <div className="absolute bottom-32 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{
           animationDelay: '1s'
