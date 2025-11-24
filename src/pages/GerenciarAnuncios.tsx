@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle, Edit, Store, Trash2 } from "lucide-react";
+import { Plus, ExternalLink, TrendingDown, TrendingUp, AlertCircle, Edit, Store, Trash2, ThumbsDown } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -480,11 +480,13 @@ export default function GerenciarAnuncios() {
                       <TableRow key={anuncio.id}>
                         <TableCell>
                           {anuncio.imagem ? (
-                            <img 
-                              src={anuncio.imagem} 
-                              alt="Foto do anúncio" 
-                              className="w-16 h-16 object-cover rounded"
-                            />
+                            <div className="w-16 h-16">
+                              <img 
+                                src={anuncio.imagem} 
+                                alt="Foto do anúncio" 
+                                className="w-full h-full object-cover rounded aspect-square"
+                              />
+                            </div>
                           ) : (
                             <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-muted-foreground text-xs">
                               Sem foto
@@ -568,9 +570,13 @@ export default function GerenciarAnuncios() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(anuncio.status)}>
-                            {anuncio.status}
-                          </Badge>
+                          {anuncio.status === "Abaixo do mínimo" ? (
+                            <ThumbsDown className="h-5 w-5 text-red-600" />
+                          ) : (
+                            <Badge className={getStatusColor(anuncio.status)}>
+                              {anuncio.status}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
