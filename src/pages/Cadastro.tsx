@@ -101,7 +101,7 @@ export default function Cadastro() {
 
   return (
     <div className="flex min-h-screen overflow-hidden">
-      {/* Left Panel - Hero Image with Overlay */}
+      {/* Left Panel - Hero Image */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
@@ -110,38 +110,21 @@ export default function Cadastro() {
             alt="Beach" 
             className="w-full h-full object-cover"
           />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 via-cyan-500/70 to-blue-400/60" />
         </div>
 
-        {/* Animated Geometric Shapes */}
+        {/* Animated Geometric Shapes (subtle) */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full opacity-20 blur-3xl animate-pulse" />
-          <div className="absolute bottom-32 right-20 w-96 h-96 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full opacity-15 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 flex items-center justify-center p-12 w-full">
-          <div className="max-w-md text-white space-y-6 animate-fade-in">
-            <div className="flex items-center justify-center mb-8">
-              <img src={logoNash} alt="Nash" className="h-24 w-auto filter drop-shadow-lg" />
-            </div>
-            <h1 className="text-5xl font-bold leading-tight">
-              Junte-se a nós
-            </h1>
-            <p className="text-lg text-white/90 leading-relaxed">
-              Crie sua conta e comece a proteger sua marca contra violações de preços em marketplaces.
-            </p>
-          </div>
+          <div className="absolute top-20 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
       </div>
 
       {/* Right Panel - Signup Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background overflow-y-auto">
         <div className="w-full max-w-md space-y-8 animate-slide-up py-8">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex justify-center mb-8">
-            <img src={logoNash} alt="Nash" className="h-16 w-auto" />
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <img src={logoNash} alt="Nash" className="h-20 w-auto" />
           </div>
 
           <div className="text-center space-y-2">
