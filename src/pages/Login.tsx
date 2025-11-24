@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { User, Lock } from "lucide-react";
 import logoNash from "@/assets/logo-nash.png";
 import heroBeach from "@/assets/hero-beach.jpeg";
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,7 +53,7 @@ export default function Login() {
         </div>
 
         {/* Animated Geometric Shapes (subtle) */}
-        <div className="absolute inset-0 overflow-hidden bg-gray-100 opacity-25">
+        <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-20 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl animate-pulse" />
           <div className="absolute bottom-32 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{
           animationDelay: '1s'
@@ -69,7 +70,7 @@ export default function Login() {
           </div>
 
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">  BRAND PROTECTION</h2>
+            <h2 className="text-3xl font-display font-bold tracking-tight">NASH BRAND PROTECTION</h2>
             <p className="text-muted-foreground">Entre com suas credenciais</p>
           </div>
 
