@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { User, Lock } from "lucide-react";
 import logoNash from "@/assets/logo-nash.png";
 import heroBeach from "@/assets/hero-beach.jpeg";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -24,17 +25,25 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const {
-        error
-      } = await signIn(email, password);
+      const { error } = await signIn(email, password);
       if (error) {
         setError(error.message);
       } else {
-        setTimeout(() => {
-          if (isAdmin) {
-            navigate("/dashboard");
-          } else {
-            navigate("/dashboard-cliente");
+        // Wait for auth state to settle and check role directly from database
+        setTimeout(async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: roleData } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", user.id)
+              .single();
+            
+            if (roleData?.role === "ADMIN") {
+              navigate("/dashboard");
+            } else {
+              navigate("/dashboard-cliente");
+            }
           }
         }, 500);
       }
