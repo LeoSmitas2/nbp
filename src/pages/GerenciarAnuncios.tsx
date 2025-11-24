@@ -79,6 +79,7 @@ export default function GerenciarAnuncios() {
   const [marketplaceFilter, setMarketplaceFilter] = useState<string>("all");
   const [clienteFilter, setClienteFilter] = useState<string>("all");
   const [contaFilter, setContaFilter] = useState<string>("all");
+  const [codigoFilter, setCodigoFilter] = useState<string>("");
 
   // Filter options
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -101,7 +102,7 @@ export default function GerenciarAnuncios() {
 
   useEffect(() => {
     fetchAnuncios();
-  }, [statusFilter, produtoFilter, marketplaceFilter, clienteFilter, contaFilter]);
+  }, [statusFilter, produtoFilter, marketplaceFilter, clienteFilter, contaFilter, codigoFilter]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -148,6 +149,9 @@ export default function GerenciarAnuncios() {
       }
       if (contaFilter !== "all") {
         query = query.eq("conta_marketplace_id", contaFilter);
+      }
+      if (codigoFilter.trim() !== "") {
+        query = query.ilike("codigo_marketplace", `%${codigoFilter.trim()}%`);
       }
 
       const { data, error } = await query;
@@ -340,6 +344,15 @@ export default function GerenciarAnuncios() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="mb-4">
+              <Label htmlFor="codigo-filter">Buscar por Código</Label>
+              <Input
+                id="codigo-filter"
+                placeholder="Digite o código do anúncio (ex: MLB123456)"
+                value={codigoFilter}
+                onChange={(e) => setCodigoFilter(e.target.value)}
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status-filter">Status</Label>
@@ -434,6 +447,7 @@ export default function GerenciarAnuncios() {
                   setMarketplaceFilter("all");
                   setClienteFilter("all");
                   setContaFilter("all");
+                  setCodigoFilter("");
                 }}
               >
                 Limpar Filtros
