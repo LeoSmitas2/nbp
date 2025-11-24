@@ -61,6 +61,7 @@ export default function GerenciarUsuarios() {
   const [editContas, setEditContas] = useState<ContaMarketplace[]>([]);
   const [newContaNome, setNewContaNome] = useState("");
   const [newContaMarketplace, setNewContaMarketplace] = useState("");
+  const [marketplaces, setMarketplaces] = useState<{ id: string; nome: string }[]>([]);
 
   // Add form states
   const [addEmail, setAddEmail] = useState("");
@@ -170,18 +171,29 @@ export default function GerenciarUsuarios() {
     setEditEmpresa(usuario.empresa || "");
     setEditRole(usuario.user_roles[0]?.role || "CLIENT");
     
-    // Fetch marketplace accounts
+    // Fetch marketplace accounts and marketplaces
     try {
-      const { data, error } = await supabase
-        .from("contas_marketplace")
-        .select("*")
-        .eq("cliente_id", usuario.id);
+      const [contasResult, marketplacesResult] = await Promise.all([
+        supabase
+          .from("contas_marketplace")
+          .select("*")
+          .eq("cliente_id", usuario.id),
+        supabase
+          .from("marketplaces")
+          .select("id, nome")
+          .eq("ativo", true)
+          .order("nome")
+      ]);
       
-      if (error) throw error;
-      setEditContas(data || []);
+      if (contasResult.error) throw contasResult.error;
+      if (marketplacesResult.error) throw marketplacesResult.error;
+      
+      setEditContas(contasResult.data || []);
+      setMarketplaces(marketplacesResult.data || []);
     } catch (error) {
-      console.error("Erro ao buscar contas:", error);
+      console.error("Erro ao buscar dados:", error);
       setEditContas([]);
+      setMarketplaces([]);
     }
     
     setEditDialogOpen(true);
@@ -820,11 +832,21 @@ export default function GerenciarUsuarios() {
                     value={newContaNome}
                     onChange={(e) => setNewContaNome(e.target.value)}
                   />
-                  <Input
-                    placeholder="Marketplace (ex: Mercado Livre)"
+                  <Select
                     value={newContaMarketplace}
-                    onChange={(e) => setNewContaMarketplace(e.target.value)}
-                  />
+                    onValueChange={setNewContaMarketplace}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o marketplace" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {marketplaces.map((marketplace) => (
+                        <SelectItem key={marketplace.id} value={marketplace.nome}>
+                          {marketplace.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button
                   variant="outline"
