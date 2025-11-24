@@ -70,7 +70,7 @@ export default function Login() {
           </div>
 
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-display font-bold tracking-tight">NASH BRAND PROTECTION</h2>
+            <h2 className="text-3xl font-display font-bold tracking-tight">BRAND PROTECTION</h2>
             <p className="text-muted-foreground">Entre com suas credenciais</p>
           </div>
 
