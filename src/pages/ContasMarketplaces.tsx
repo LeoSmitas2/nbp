@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,8 @@ export default function ContasMarketplaces() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [contaToDelete, setContaToDelete] = useState<string | null>(null);
   const [editingClienteId, setEditingClienteId] = useState<string | null>(null);
   const [contasCliente, setContasCliente] = useState<{ nome: string; marketplace: string; cliente_id: string }[]>([]);
   
@@ -257,6 +260,27 @@ export default function ContasMarketplaces() {
     }
   };
 
+  const handleDeleteConta = async () => {
+    if (!contaToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("contas_marketplace")
+        .delete()
+        .eq("id", contaToDelete);
+
+      if (error) throw error;
+
+      toast.success("Conta excluída com sucesso");
+      setIsDeleteDialogOpen(false);
+      setContaToDelete(null);
+      fetchContas();
+    } catch (error) {
+      console.error("Erro ao excluir conta:", error);
+      toast.error("Erro ao excluir conta");
+    }
+  };
+
   const limparFiltros = () => {
     setFiltroNome("");
     setFiltroMarketplace("all");
@@ -376,7 +400,7 @@ export default function ContasMarketplaces() {
                   <TableHead>Empresa</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -428,15 +452,28 @@ export default function ContasMarketplaces() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(conta.cliente_id)}
-                        disabled={!conta.cliente_id}
-                        title={conta.cliente_id ? "Editar contas do cliente" : "Associe a um cliente primeiro"}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(conta.cliente_id)}
+                          disabled={!conta.cliente_id}
+                          title={conta.cliente_id ? "Editar contas do cliente" : "Associe a um cliente primeiro"}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setContaToDelete(conta.id);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          title="Excluir conta"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -551,6 +588,27 @@ export default function ContasMarketplaces() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog para confirmar exclusão */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta conta de marketplace? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConta}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog para adicionar nova conta */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
