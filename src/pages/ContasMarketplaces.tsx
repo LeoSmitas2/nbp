@@ -12,12 +12,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Plus, Trash2, Store, Building2, Filter, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const contaSchema = z.object({
+  nome_conta: z.string().trim().min(1, "Nome da conta é obrigatório").max(100, "Nome deve ter no máximo 100 caracteres"),
+  marketplace: z.string().min(1, "Marketplace é obrigatório"),
+  cliente_id: z.string().optional()
+});
 
 interface ContaMarketplace {
   id: string;
   nome_conta: string;
   marketplace: string;
-  cliente_id: string;
+  cliente_id: string | null;
   created_at: string;
 }
 
@@ -47,8 +54,10 @@ export default function ContasMarketplaces() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditContaDialogOpen, setIsEditContaDialogOpen] = useState(false);
   const [contaToDelete, setContaToDelete] = useState<string | null>(null);
   const [editingClienteId, setEditingClienteId] = useState<string | null>(null);
+  const [editingConta, setEditingConta] = useState<ContaComCliente | null>(null);
   const [contasCliente, setContasCliente] = useState<{ nome: string; marketplace: string; cliente_id: string }[]>([]);
   
   // Filtros
@@ -260,6 +269,48 @@ export default function ContasMarketplaces() {
     }
   };
 
+  const handleEditConta = (conta: ContaComCliente) => {
+    setEditingConta(conta);
+    setIsEditContaDialogOpen(true);
+  };
+
+  const handleSaveConta = async () => {
+    if (!editingConta) return;
+
+    try {
+      const validation = contaSchema.safeParse({
+        nome_conta: editingConta.nome_conta,
+        marketplace: editingConta.marketplace,
+        cliente_id: editingConta.cliente_id || undefined
+      });
+
+      if (!validation.success) {
+        const errorMessage = validation.error.errors[0]?.message || "Dados inválidos";
+        toast.error(errorMessage);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("contas_marketplace")
+        .update({
+          nome_conta: editingConta.nome_conta,
+          marketplace: editingConta.marketplace,
+          cliente_id: editingConta.cliente_id || null
+        })
+        .eq("id", editingConta.id);
+
+      if (error) throw error;
+
+      toast.success("Conta atualizada com sucesso");
+      setIsEditContaDialogOpen(false);
+      setEditingConta(null);
+      fetchContas();
+    } catch (error) {
+      console.error("Erro ao atualizar conta:", error);
+      toast.error("Erro ao atualizar conta");
+    }
+  };
+
   const handleDeleteConta = async () => {
     if (!contaToDelete) return;
 
@@ -456,9 +507,8 @@ export default function ContasMarketplaces() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleEdit(conta.cliente_id)}
-                          disabled={!conta.cliente_id}
-                          title={conta.cliente_id ? "Editar contas do cliente" : "Associe a um cliente primeiro"}
+                          onClick={() => handleEditConta(conta)}
+                          title="Editar conta"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -583,6 +633,84 @@ export default function ContasMarketplaces() {
               Cancelar
             </Button>
             <Button onClick={handleSave}>
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para editar conta individual */}
+      <Dialog open={isEditContaDialogOpen} onOpenChange={setIsEditContaDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Conta de Marketplace</DialogTitle>
+            <DialogDescription>
+              Altere o nome da conta, marketplace ou cliente associado
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingConta && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nome">Nome da Conta</Label>
+                <Input
+                  id="edit-nome"
+                  placeholder="Ex: Minha Loja Principal"
+                  value={editingConta.nome_conta}
+                  onChange={(e) => setEditingConta({ ...editingConta, nome_conta: e.target.value })}
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-marketplace">Marketplace</Label>
+                <Select
+                  value={editingConta.marketplace}
+                  onValueChange={(value) => setEditingConta({ ...editingConta, marketplace: value })}
+                >
+                  <SelectTrigger id="edit-marketplace">
+                    <SelectValue placeholder="Selecione o marketplace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {marketplaces.map((mp) => (
+                      <SelectItem key={mp} value={mp}>
+                        {mp}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-cliente">Cliente</Label>
+                <Select
+                  value={editingConta.cliente_id || ""}
+                  onValueChange={(value) => setEditingConta({ ...editingConta, cliente_id: value || null })}
+                >
+                  <SelectTrigger id="edit-cliente">
+                    <SelectValue placeholder="Selecione o cliente (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem cliente</SelectItem>
+                    {clientes.map((cliente) => (
+                      <SelectItem key={cliente.id} value={cliente.id}>
+                        {cliente.name} - {cliente.empresa || cliente.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Deixe vazio se a conta não pertence a nenhum cliente
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditContaDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveConta}>
               Salvar Alterações
             </Button>
           </DialogFooter>
